@@ -94,9 +94,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = []
 if (BASE_DIR / 'dist').exists():
     STATICFILES_DIRS.append(BASE_DIR / 'dist')
+    WHITENOISE_ROOT = str(BASE_DIR / 'dist')
 
 # WhiteNoise compressed static storage
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
