@@ -1,0 +1,6 @@
+{
+  "name": "TaskFlow",
+  "description": "Professional task and schedule management platform with interactive tracking, recurring schedules, and intelligent assistant. Created by Rifa Khanum.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

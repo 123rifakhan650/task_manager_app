@@ -1,0 +1,572 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "rifakhanum",
+      "email": "rifakhanum14@gmail.com",
+      "first_name": "Rifa",
+      "last_name": "Khanum",
+      "password_hash": "pbkdf2_sha256$260000$hash$rifa123",
+      "role": "admin",
+      "is_staff": true,
+      "is_superuser": true,
+      "can_view_audit_logs": true,
+      "created_at": "2026-08-31T14:04:40.758Z"
+    },
+    {
+      "id": 2,
+      "username": "team_member",
+      "email": "member@taskflow.io",
+      "first_name": "Alex",
+      "last_name": "Member",
+      "password_hash": "pbkdf2_sha256$260000$hash$member123",
+      "role": "member",
+      "is_staff": false,
+      "is_superuser": false,
+      "can_view_audit_logs": false,
+      "created_at": "2026-09-04T14:04:40.758Z"
+    },
+    {
+      "id": 4,
+      "username": "sairabanu",
+      "email": "iqra15231@gmail.com",
+      "first_name": "Saira",
+      "last_name": "Banu",
+      "password_hash": "test_hash",
+      "role": "member",
+      "is_staff": false,
+      "is_superuser": false,
+      "can_view_audit_logs": false,
+      "created_at": "2026-09-07T14:04:48.754Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": 5,
+      "user_id": 4,
+      "username": "sairabanu",
+      "title": "CA",
+      "start_date": "2026-09-06",
+      "due_date": "2026-09-09",
+      "description": "",
+      "priority": "MEDIUM",
+      "status": "COMPLETED",
+      "category": "General",
+      "estimated_hours": 1,
+      "actual_hours": 0,
+      "tags": [],
+      "is_ai_generated": false,
+      "subtasks": [],
+      "completed_at": "2026-09-07T14:13:45.320Z",
+      "created_at": "2026-09-07T14:08:30.787Z",
+      "updated_at": "2026-09-07T14:13:45.320Z"
+    }
+  ],
+  "recurringTasks": [
+    {
+      "id": 3,
+      "user_id": 4,
+      "title": "RCA",
+      "description": "",
+      "frequency": "DAILY",
+      "interval": 1,
+      "days_of_week": "Mon,Wed,Fri",
+      "priority": "MEDIUM",
+      "category": "Routine",
+      "start_date": "2026-09-07",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2026-09-07T14:06:43.895Z"
+    }
+  ],
+  "taskOccurrences": [
+    {
+      "id": 10,
+      "recurring_task_id": 3,
+      "recurring_task_title": "RCA",
+      "scheduled_date": "2026-09-11",
+      "status": "COMPLETED",
+      "completed_at": "2026-09-07T14:12:52.858Z",
+      "notes": "Occurrence 5",
+      "created_at": "2026-09-07T14:06:43.895Z"
+    },
+    {
+      "id": 11,
+      "recurring_task_id": 3,
+      "recurring_task_title": "RCA",
+      "scheduled_date": "2026-09-12",
+      "status": "COMPLETED",
+      "completed_at": "2026-09-07T14:13:22.167Z",
+      "notes": "5 resolved",
+      "created_at": "2026-09-07T14:07:24.513Z"
+    },
+    {
+      "id": 12,
+      "recurring_task_id": 3,
+      "recurring_task_title": "RCA",
+      "scheduled_date": "2026-09-13",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Generated occurrence 6",
+      "created_at": "2026-09-07T14:07:24.513Z"
+    },
+    {
+      "id": 13,
+      "recurring_task_id": 3,
+      "recurring_task_title": "RCA",
+      "scheduled_date": "2026-09-14",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Generated occurrence 7",
+      "created_at": "2026-09-07T14:07:24.513Z"
+    },
+    {
+      "id": 14,
+      "recurring_task_id": 3,
+      "recurring_task_title": "RCA",
+      "scheduled_date": "2026-09-15",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Generated occurrence 8",
+      "created_at": "2026-09-07T14:07:24.513Z"
+    },
+    {
+      "id": 15,
+      "recurring_task_id": 3,
+      "recurring_task_title": "RCA",
+      "scheduled_date": "2026-09-16",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Generated occurrence 9",
+      "created_at": "2026-09-07T14:07:24.513Z"
+    },
+    {
+      "id": 16,
+      "recurring_task_id": 3,
+      "recurring_task_title": "RCA",
+      "scheduled_date": "2026-09-17",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Generated occurrence 10",
+      "created_at": "2026-09-07T14:07:24.513Z"
+    }
+  ],
+  "comments": [],
+  "auditLogs": [
+    {
+      "id": 37,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "LOGIN",
+      "entity_type": "User",
+      "entity_id": "4",
+      "details": "User login successful: sairabanu (role: member)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:20:42.387Z"
+    },
+    {
+      "id": 36,
+      "user_id": 1,
+      "username": "rifakhanum",
+      "action": "INITIALIZE_SYSTEM",
+      "entity_type": "System",
+      "entity_id": "0",
+      "details": "TaskFlow Manager initialized with enterprise architecture",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:20:26.832Z"
+    },
+    {
+      "id": 35,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:13:45.604Z"
+    },
+    {
+      "id": 34,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "COMPLETE_TASK",
+      "entity_type": "Task",
+      "entity_id": "5",
+      "details": "Marked task as COMPLETED: \"CA\"",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:13:45.320Z"
+    },
+    {
+      "id": 33,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:13:22.360Z"
+    },
+    {
+      "id": 32,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "COMPLETE_OCCURRENCE",
+      "entity_type": "TaskOccurrence",
+      "entity_id": "11",
+      "details": "Completed recurring occurrence for \"RCA\" scheduled on 2026-09-12",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:13:22.167Z"
+    },
+    {
+      "id": 31,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:13:18.887Z"
+    },
+    {
+      "id": 30,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "UPDATE_OCCURRENCE_NOTE",
+      "entity_type": "TaskOccurrence",
+      "entity_id": "11",
+      "details": "Updated note on occurrence for \"RCA\" (2026-09-12)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:13:18.630Z"
+    },
+    {
+      "id": 29,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:12:53.175Z"
+    },
+    {
+      "id": 28,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "COMPLETE_OCCURRENCE",
+      "entity_type": "TaskOccurrence",
+      "entity_id": "10",
+      "details": "Completed recurring occurrence for \"RCA\" scheduled on 2026-09-11",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:12:52.858Z"
+    },
+    {
+      "id": 27,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:11:39.778Z"
+    },
+    {
+      "id": 26,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK",
+      "entity_type": "Task",
+      "entity_id": "5",
+      "details": "Edited task: \"CA\"",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:11:39.592Z"
+    },
+    {
+      "id": 25,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "GEMINI_GENERATE",
+      "entity_type": "AI",
+      "entity_id": "0",
+      "details": "Generated AI task preview: \"Prepare presentation\"",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:09:29.504Z"
+    },
+    {
+      "id": 24,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:08:51.003Z"
+    },
+    {
+      "id": 23,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "DELETE_OCCURRENCE",
+      "entity_type": "TaskOccurrence",
+      "entity_id": "8",
+      "details": "Deleted occurrence for \"RCA\" on 2026-09-09",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:08:50.729Z"
+    },
+    {
+      "id": 22,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:08:31.133Z"
+    },
+    {
+      "id": 21,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "CREATE_TASK",
+      "entity_type": "Task",
+      "entity_id": "5",
+      "details": "Created task: \"RCA\" [MEDIUM]",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:08:30.787Z"
+    },
+    {
+      "id": 20,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:08:11.029Z"
+    },
+    {
+      "id": 19,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "DELETE_OCCURRENCE",
+      "entity_type": "TaskOccurrence",
+      "entity_id": "7",
+      "details": "Deleted occurrence for \"RCA\" on 2026-09-08",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:08:10.680Z"
+    },
+    {
+      "id": 18,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:07:55.729Z"
+    },
+    {
+      "id": 17,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "DELETE_OCCURRENCE",
+      "entity_type": "TaskOccurrence",
+      "entity_id": "9",
+      "details": "Deleted occurrence for \"RCA\" on 2026-09-10",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:07:55.434Z"
+    },
+    {
+      "id": 16,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:07:44.797Z"
+    },
+    {
+      "id": 15,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "DELETE_OCCURRENCE",
+      "entity_type": "TaskOccurrence",
+      "entity_id": "6",
+      "details": "Deleted occurrence for \"RCA\" on 2026-09-07",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:07:44.383Z"
+    },
+    {
+      "id": 14,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:07:24.808Z"
+    },
+    {
+      "id": 13,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "GENERATE_OCCURRENCES",
+      "entity_type": "RecurringTask",
+      "entity_id": "3",
+      "details": "Generated 6 new occurrences for \"RCA\"",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:07:24.513Z"
+    },
+    {
+      "id": 12,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:06:44.212Z"
+    },
+    {
+      "id": 11,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "CREATE_RECURRING",
+      "entity_type": "RecurringTask",
+      "entity_id": "3",
+      "details": "Created recurring schedule: \"RCA\" (DAILY, interval 1, 5 occurrences)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:06:43.896Z"
+    },
+    {
+      "id": 10,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:05:36.112Z"
+    },
+    {
+      "id": 9,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "LOGIN",
+      "entity_type": "User",
+      "entity_id": "4",
+      "details": "User login successful: Sairabanu (role: member)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:05:35.731Z"
+    },
+    {
+      "id": 8,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:04:49.237Z"
+    },
+    {
+      "id": 7,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:04:49.130Z"
+    },
+    {
+      "id": 6,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:04:48.961Z"
+    },
+    {
+      "id": 5,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "LOGIN",
+      "entity_type": "User",
+      "entity_id": "4",
+      "details": "User login successful: Sairabanu (role: member)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:04:48.801Z"
+    },
+    {
+      "id": 4,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:04:48.798Z"
+    },
+    {
+      "id": 3,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "LOGIN",
+      "entity_type": "User",
+      "entity_id": "4",
+      "details": "User login successful: Sairabanu (role: member)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:04:48.755Z"
+    },
+    {
+      "id": 2,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "REGISTER",
+      "entity_type": "User",
+      "entity_id": "4",
+      "details": "Created user account: sairabanu",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:04:48.755Z"
+    },
+    {
+      "id": 1,
+      "user_id": 1,
+      "username": "rifakhanum",
+      "action": "INITIALIZE_SYSTEM",
+      "entity_type": "System",
+      "entity_id": "0",
+      "details": "TaskFlow Manager initialized with enterprise architecture",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-07T14:04:40.759Z"
+    }
+  ],
+  "nextIds": {
+    "nextTaskId": 6,
+    "nextCommentId": 3,
+    "nextRecurringId": 4,
+    "nextOccurrenceId": 17,
+    "nextUserId": 6,
+    "nextAuditId": 38
+  }
+}
