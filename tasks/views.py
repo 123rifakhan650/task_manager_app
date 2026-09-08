@@ -431,43 +431,49 @@ class MetricsView(views.APIView):
 
 def call_gemini_api(prompt_text, system_instruction=None):
     """
-    Calls Gemini using GEMINI_API_KEY environment variable if available.
-    Supports fallback models gemini-2.5-flash and gemini-1.5-flash.
-    Returns generated string or None.
+    Calls Google Gemini using GEMINI_API_KEY environment variable if available.
+    Uses modern supported candidate models: gemini-3.8-flash, gemini-3.1-flash-lite, gemini-flash-latest.
+    Includes transient error retry and model fallback.
+    Returns tuple (generated_text, model_name) or (None, None).
     """
     api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
     if not api_key:
-        return None
+        return None, None
 
-    models = ['gemini-2.5-flash', 'gemini-1.5-flash']
-    for model in models:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-        payload = {
-            "contents": [{"parts": [{"text": prompt_text}]}],
-            "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"}
-        }
-        if system_instruction:
-            payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
+    candidate_models = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest']
+    for model in candidate_models:
+        for attempt in range(2):
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt_text}]}],
+                "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
+            }
+            if system_instruction:
+                payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
 
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode('utf-8'),
-            headers={'Content-Type': 'application/json'},
-            method='POST'
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=12) as response:
-                if response.status == 200:
-                    data = json.loads(response.read().decode('utf-8'))
-                    candidates = data.get('candidates', [])
-                    if candidates:
-                        content_parts = candidates[0].get('content', {}).get('parts', [])
-                        if content_parts:
-                            return content_parts[0].get('text', '')
-        except Exception as e:
-            print(f"[Gemini API Exception for {model}]: {e}")
-            continue
-    return None
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=14) as response:
+                    if response.status == 200:
+                        data = json.loads(response.read().decode('utf-8'))
+                        candidates = data.get('candidates', [])
+                        if candidates:
+                            content_parts = candidates[0].get('content', {}).get('parts', [])
+                            if content_parts:
+                                return content_parts[0].get('text', ''), model
+            except Exception as e:
+                err_str = str(e).lower()
+                is_transient = '503' in err_str or 'unavailable' in err_str or 'timeout' in err_str
+                if is_transient and attempt == 0:
+                    time.sleep(0.5)
+                    continue
+                break
+    return None, None
 
 
 def clean_json_response(raw_text):
@@ -493,6 +499,171 @@ def clean_json_response(raw_text):
     return None
 
 
+def parse_natural_task_prompt(input_text, fallback_category='General', fallback_priority='MEDIUM'):
+    """
+    Resilient natural-language task prompt parser.
+    Cleanly separates task title from dates, priority, category, and notes.
+    """
+    text = (input_text or '').strip()
+    # Strip leading command phrasing
+    text = re.sub(
+        r'^(?:please\s+)?(?:create|add|make|schedule|new|generate)\s+(?:a\s+)?(?:new\s+)?(?:task\s*:?|routine\s*:?|item\s*:?)?',
+        '',
+        text,
+        flags=re.IGNORECASE
+    ).strip()
+
+    # 1. Extract comments / notes / pending items
+    comments = ''
+    comm_match = re.search(r'\b(?:comments?|notes?|pending(?:\s+items?)?)\s*[:=\-]?\s*(.+)$', text, flags=re.IGNORECASE)
+    if comm_match:
+        comments = comm_match.group(1).strip()
+        text = text[:comm_match.start()].strip()
+
+    # 2. Extract priority
+    priority = fallback_priority if fallback_priority in ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] else 'MEDIUM'
+    prio_match = re.search(r'\b(?:priority|prio)\s*[:=\-]?\s*(URGENT|HIGH|MEDIUM|LOW)\b', text, flags=re.IGNORECASE)
+    if prio_match:
+        priority = prio_match.group(1).upper()
+        text = (text[:prio_match.start()] + ' ' + text[prio_match.end():]).strip()
+    else:
+        st_prio = re.search(r'\b(URGENT|HIGH|MEDIUM|LOW)\b', text, flags=re.IGNORECASE)
+        if st_prio:
+            priority = st_prio.group(1).upper()
+            text = (text[:st_prio.start()] + ' ' + text[st_prio.end():]).strip()
+
+    # Dates
+    today = timezone.now().date()
+    tomorrow = today + timedelta(days=1)
+    friday_diff = 4 - today.weekday()
+    if friday_diff <= 0:
+        friday_diff += 7
+    next_friday = today + timedelta(days=friday_diff)
+
+    def parse_relative_date(raw_str, default_date):
+        s = (raw_str or '').lower().strip()
+        if s == 'today':
+            return today.isoformat()
+        if s == 'tomorrow':
+            return (today + timedelta(days=1)).isoformat()
+        if s == 'day after tomorrow':
+            return (today + timedelta(days=2)).isoformat()
+        if 'next week' in s:
+            return (today + timedelta(days=7)).isoformat()
+        weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        for i, w in enumerate(weekdays):
+            if w in s:
+                diff = i - today.weekday()
+                if diff <= 0:
+                    diff += 7
+                if 'next' in s and diff < 7:
+                    diff += 7
+                return (today + timedelta(days=diff)).isoformat()
+        try:
+            from datetime import datetime
+            return datetime.strptime(raw_str, '%Y-%m-%d').date().isoformat()
+        except Exception:
+            return default_date.isoformat()
+
+    start_date = today.isoformat()
+    due_date = tomorrow.isoformat()
+
+    # 3. Extract due date
+    due_match = re.search(r'\b(?:due(?:\s*date)?|by|deadline)\s*[:=\-]?\s*([a-zA-Z0-9_\-\/]+(?:\s+[a-zA-Z0-9_\-\/]+)?)', text, flags=re.IGNORECASE)
+    if due_match:
+        due_date = parse_relative_date(due_match.group(1), next_friday)
+        text = (text[:due_match.start()] + ' ' + text[due_match.end():]).strip()
+
+    # 4. Extract start date
+    start_match = re.search(r'\b(?:start(?:s|ing)?(?:\s*date)?|from)\s*[:=\-]?\s*([a-zA-Z0-9_\-\/]+(?:\s+[a-zA-Z0-9_\-\/]+)?)', text, flags=re.IGNORECASE)
+    if start_match:
+        start_date = parse_relative_date(start_match.group(1), today)
+        text = (text[:start_match.start()] + ' ' + text[start_match.end():]).strip()
+
+    # 5. Extract category
+    category = fallback_category or 'General'
+    cat_match = re.search(r'\b(?:category|type)\s*[:=\-]?\s*([a-zA-Z0-9_\-]+)', text, flags=re.IGNORECASE)
+    if cat_match:
+        category = cat_match.group(1)
+        text = (text[:cat_match.start()] + ' ' + text[cat_match.end():]).strip()
+
+    # 6. Clean task title
+    clean_title = re.sub(r'\s+', ' ', text)
+    clean_title = re.sub(r'^[:\-–—,\s]+|[:\-–—,\s]+$', '', clean_title).strip()
+    if not clean_title:
+        clean_title = 'New Task'
+    else:
+        clean_title = clean_title[0].upper() + clean_title[1:]
+
+    return {
+        'title': clean_title,
+        'start_date': start_date,
+        'due_date': due_date,
+        'priority': priority,
+        'category': category,
+        'comments': comments,
+        'description': clean_title + (f" (Notes: {comments})" if comments else ""),
+    }
+
+
+def find_task_to_delete(query, user_tasks):
+    """
+    Resilient task finder for deletion commands.
+    Handles exact title, partial match, referential keywords ('last', 'it'), and ID lookup.
+    """
+    if not user_tasks or not user_tasks.exists():
+        return None
+
+    raw = (query or '').strip()
+    lower = raw.lower()
+
+    # 1. Check direct ID matching
+    id_match = re.search(r'#?(\d+)', raw)
+    if id_match:
+        task_id = int(id_match.group(1))
+        found = user_tasks.filter(pk=task_id).first()
+        if found:
+            return found
+
+    # 2. Clean command verbs and prefix phrases
+    cleaned = re.sub(
+        r'^(?:please\s+)?(?:delete|remove|cancel|drop|clear)\s+(?:a\s+)?(?:the\s+)?(?:task\s*:?|item\s*:?)?',
+        '',
+        lower,
+        flags=re.IGNORECASE
+    ).strip()
+    cleaned = re.sub(r'^[:\-–—\s]+|[:\-–—\s]+$', '', cleaned).strip()
+
+    # 3. Handle referential commands
+    if not cleaned or cleaned in ['it', 'that', 'this', 'last', 'last task', 'the task', 'task']:
+        return user_tasks.order_by('-created_at').first()
+
+    # 4. Exact title match (case-insensitive)
+    exact = user_tasks.filter(title__iexact=cleaned).first()
+    if exact:
+        return exact
+
+    # 5. Substring matching
+    for t in user_tasks:
+        t_low = t.title.lower()
+        if cleaned in t_low or t_low in cleaned:
+            return t
+
+    # 6. Word-level token matching
+    tokens = [w for w in re.split(r'\s+', cleaned) if len(w) > 2 and w not in ['the', 'and', 'for', 'task', 'with']]
+    if tokens:
+        for t in user_tasks:
+            t_low = t.title.lower()
+            if all(tok in t_low for tok in tokens):
+                return t
+        for t in user_tasks:
+            t_low = t.title.lower()
+            if any(tok in t_low for tok in tokens):
+                return t
+
+    return None
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class GeminiAiView(views.APIView):
     permission_classes = [AllowAny]
@@ -505,54 +676,71 @@ class GeminiAiView(views.APIView):
         category = request.data.get('category', 'Engineering')
         priority = request.data.get('priority', 'MEDIUM')
         today_str = timezone.now().strftime('%Y-%m-%d')
-        due_date_str = (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%d')
 
         system_instruction = (
-            "You are an expert project management assistant. Extract structured task details from the prompt.\n"
-            "Return valid JSON matching this schema:\n"
+            "You are an expert project management assistant. Extract structured task details from the prompt.\n\n"
+            "CRITICAL REQUIREMENT:\n"
+            "The 'title' field MUST ONLY contain the concise, clean task name (e.g. 'Prepare presentation', 'Pay electricity bill').\n"
+            "NEVER include dates, 'start tomorrow', 'due Friday', priority, or comments in the title field!\n\n"
+            "Example:\n"
+            'Prompt: "Prepare presentation start tomorrow due Friday priority HIGH comments draft slides first"\n'
+            "Desired output:\n"
             "{\n"
-            '  "title": "Clear action-oriented task title",\n'
-            '  "description": "Comprehensive description with rationale",\n'
-            '  "priority": "LOW" | "MEDIUM" | "HIGH" | "URGENT",\n'
-            '  "category": "String category name",\n'
+            '  "title": "Prepare presentation",\n'
+            '  "description": "Prepare presentation slides and materials",\n'
+            '  "priority": "HIGH",\n'
+            '  "category": "Work",\n'
             '  "start_date": "YYYY-MM-DD",\n'
             '  "due_date": "YYYY-MM-DD",\n'
-            '  "estimated_hours": number,\n'
-            '  "tags": ["tag1", "tag2"],\n'
-            '  "subtasks": [{"title": "Subtask title", "completed": false}]\n'
+            '  "comments": "draft slides first",\n'
+            '  "estimated_hours": 3.0,\n'
+            '  "tags": ["presentation", "ai-planned"],\n'
+            '  "subtasks": [{"title": "Draft slide deck outline", "completed": false}]\n'
             "}"
         )
 
         user_prompt = f"Extract a task breakdown for: {prompt}. Default category: {category}, preferred priority: {priority}, reference date: {today_str}."
 
         preview_data = None
-        used_model = "heuristic-engine"
+        used_model = "rule-based-generator"
 
-        ai_raw = call_gemini_api(user_prompt, system_instruction)
+        ai_raw, matched_model = call_gemini_api(user_prompt, system_instruction)
         if ai_raw:
             parsed = clean_json_response(ai_raw)
             if isinstance(parsed, dict) and 'title' in parsed:
                 preview_data = parsed
-                used_model = "gemini-2.5-flash"
+                used_model = matched_model or "gemini-3.8-flash"
+
+        # Heuristic / rule-based fallback
+        fallback = parse_natural_task_prompt(prompt, fallback_category=category, fallback_priority=priority)
 
         if not preview_data:
-            words = prompt.split()
-            title = prompt if len(prompt) < 60 else ' '.join(words[:7]) + '...'
             preview_data = {
-                'title': title,
-                'description': f"Execution plan and requirements breakdown for: {prompt}",
-                'priority': priority if priority in ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] else 'MEDIUM',
-                'category': category or 'Engineering',
-                'start_date': today_str,
-                'due_date': due_date_str,
-                'estimated_hours': 3.5,
-                'tags': ['ai-planned', 'django-drf'],
+                'title': fallback['title'],
+                'description': fallback['description'],
+                'priority': fallback['priority'],
+                'category': fallback['category'],
+                'start_date': fallback['start_date'],
+                'due_date': fallback['due_date'],
+                'comments': fallback['comments'],
+                'estimated_hours': 3.0,
+                'tags': ['ai-planned', 'taskflow'],
                 'subtasks': [
-                    {'id': '1', 'title': 'Phase 1: Architecture review and specifications', 'completed': False},
-                    {'id': '2', 'title': 'Phase 2: Core implementation and unit tests', 'completed': False},
-                    {'id': '3', 'title': 'Phase 3: Integration verification and deployment', 'completed': False},
+                    {'id': '1', 'title': f"Phase 1: Initial scoping for {fallback['title']}", 'completed': False},
+                    {'id': '2', 'title': f"Phase 2: Execution and review", 'completed': False},
+                    {'id': '3', 'title': f"Phase 3: Final validation", 'completed': False},
                 ],
             }
+        else:
+            # Ensure title doesn't leak schedule words if model got confused
+            title_text = preview_data.get('title', '')
+            has_leak = any(k in title_text.lower() for k in ['start tomorrow', 'due friday', 'priority high', 'priority urgent', 'comments '])
+            if has_leak or not title_text:
+                preview_data['title'] = fallback['title']
+                if fallback['comments'] and not preview_data.get('comments'):
+                    preview_data['comments'] = fallback['comments']
+                if fallback['priority'] and preview_data.get('priority') == 'MEDIUM':
+                    preview_data['priority'] = fallback['priority']
 
         # Format subtasks to ensure IDs
         if 'subtasks' in preview_data and isinstance(preview_data['subtasks'], list):
@@ -576,6 +764,9 @@ class GeminiAiView(views.APIView):
             'description': preview_data.get('description'),
             'priority': preview_data.get('priority'),
             'category': preview_data.get('category'),
+            'start_date': preview_data.get('start_date'),
+            'due_date': preview_data.get('due_date'),
+            'comments': preview_data.get('comments'),
             'estimated_hours': preview_data.get('estimated_hours'),
             'tags': preview_data.get('tags'),
             'subtasks': preview_data.get('subtasks'),
@@ -662,16 +853,22 @@ class GeminiAssistantView(views.APIView):
             "- 'DELETE': Delete an existing task.\n"
             "- 'DELETE_RECURRING': Delete a recurring task.\n"
             "- 'INFO': General query, advice, summary, or question without direct modification.\n\n"
+            "CRITICAL REQUIREMENT:\n"
+            "For 'CREATE', the 'title' field MUST ONLY contain the concise task name (e.g. 'Prepare presentation').\n"
+            "NEVER include dates, 'start tomorrow', 'due Friday', priority, or comments in the title field!\n\n"
             "Return JSON matching:\n"
             "{\n"
             '  "action": "CREATE" | "CREATE_RECURRING" | "EDIT" | "DELETE" | "DELETE_RECURRING" | "INFO",\n'
             '  "reply": "Conversational reply explaining the action taken",\n'
             '  "taskData": {\n'
-            '    "title": "Title",\n'
-            '    "description": "Description",\n'
+            '    "title": "Concise task name ONLY",\n'
+            '    "description": "Comprehensive description",\n'
             '    "priority": "LOW" | "MEDIUM" | "HIGH" | "URGENT",\n'
             '    "status": "TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED",\n'
-            '    "category": "Category",\n'
+            '    "category": "Category name",\n'
+            '    "start_date": "YYYY-MM-DD",\n'
+            '    "due_date": "YYYY-MM-DD",\n'
+            '    "comments": "Any extracted notes or comments",\n'
             '    "estimated_hours": number,\n'
             '    "tags": ["tag1"],\n'
             '    "subtasks": [{"title": "step 1", "completed": false}]\n'
@@ -684,44 +881,39 @@ class GeminiAssistantView(views.APIView):
 
         user_prompt = f"User request: {message}\nCurrent active tasks:\n{tasks_summary}"
         parsed_action = None
-        used_model = "heuristic-assistant"
+        used_model = "rule-based-assistant"
 
-        ai_raw = call_gemini_api(user_prompt, system_instruction)
+        ai_raw, matched_model = call_gemini_api(user_prompt, system_instruction)
         if ai_raw:
             parsed = clean_json_response(ai_raw)
             if isinstance(parsed, dict) and 'action' in parsed:
                 parsed_action = parsed
-                used_model = "gemini-2.5-flash"
+                used_model = matched_model or "gemini-3.8-flash"
 
-        # Resilient local heuristic fallback if AI is not available
+        # Resilient local heuristic fallback if AI is not available or incomplete
+        lower = message.lower()
         if not parsed_action:
-            lower = message.lower()
-            if any(w in lower for w in ['create', 'add', 'make', 'schedule', 'new task']):
-                # Heuristic CREATE
-                title = re.sub(r'^(please\s+)?(create|add|make)\s+(a\s+)?(task\s+to\s+|task\s+for\s+|task\s+)?', '', message, flags=re.IGNORECASE).strip()
-                if not title:
-                    title = message[:50]
-                pri = 'MEDIUM'
-                if 'urgent' in lower: pri = 'URGENT'
-                elif 'high' in lower: pri = 'HIGH'
-                elif 'low' in lower: pri = 'LOW'
-
+            if any(w in lower for w in ['create', 'add', 'make', 'schedule', 'new task', 'new']):
                 parsed_action = {
                     'action': 'CREATE',
-                    'reply': f'I have created the task "{title.capitalize()}" with {pri} priority for you.',
-                    'taskData': {
-                        'title': title.capitalize(),
-                        'description': f'Created via TaskFlow Assistant: {message}',
-                        'priority': pri,
-                        'status': 'TODO',
-                        'category': 'General',
-                        'estimated_hours': 2.0,
-                        'tags': ['ai-assistant'],
-                        'subtasks': [{'title': 'Initial discovery', 'completed': False}]
-                    }
+                    'reply': 'Creating task based on your request.',
+                    'taskData': {}
                 }
+            elif any(w in lower for w in ['delete', 'remove', 'cancel', 'drop', 'clear']):
+                del_target = find_task_to_delete(message, user_tasks)
+                if del_target:
+                    parsed_action = {
+                        'action': 'DELETE',
+                        'reply': f'Deleted task "{del_target.title}" as requested.',
+                        'targetTaskId': del_target.id,
+                        'targetTitle': del_target.title,
+                    }
+                else:
+                    parsed_action = {
+                        'action': 'INFO',
+                        'reply': f'I could not find a task matching "{message}" to delete.'
+                    }
             elif any(w in lower for w in ['complete', 'finish', 'done', 'resolve', 'update', 'priority', 'status']):
-                # Find task
                 matched = None
                 for t in user_tasks:
                     if t.title.lower() in lower or str(t.id) in lower:
@@ -751,27 +943,10 @@ class GeminiAssistantView(views.APIView):
                         'action': 'INFO',
                         'reply': f'I could not locate an existing task to update based on your message: "{message}".',
                     }
-            elif any(w in lower for w in ['delete', 'remove', 'drop']):
-                matched = None
-                for t in user_tasks:
-                    if t.title.lower() in lower or str(t.id) in lower:
-                        matched = t
-                        break
-                if matched:
-                    parsed_action = {
-                        'action': 'DELETE',
-                        'reply': f'Deleted task "{matched.title}" as requested.',
-                        'targetTaskId': matched.id
-                    }
-                else:
-                    parsed_action = {
-                        'action': 'INFO',
-                        'reply': f'I could not find a task matching "{message}" to delete.'
-                    }
             else:
                 parsed_action = {
                     'action': 'INFO',
-                    'reply': f'You have {user_tasks.count()} tasks ({user_tasks.filter(status="COMPLETED").count()} completed, {user_tasks.filter(status="TODO").count()} to do). You can ask me to create, edit, prioritize, or complete tasks at any time.'
+                    'reply': f'You have {user_tasks.count()} tasks ({user_tasks.filter(status="COMPLETED").count()} completed, {user_tasks.filter(status="TODO").count()} to do). You can ask me to create, edit, prioritize, or delete tasks at any time.'
                 }
 
         # Execute the action in DB
@@ -780,25 +955,44 @@ class GeminiAssistantView(views.APIView):
 
         if action_type == 'CREATE':
             td = parsed_action.get('taskData') or parsed_action.get('task') or {}
-            title = (td.get('title') or message[:50]).strip()
+            raw_title = td.get('title') or ''
+            
+            # Always pass through parse_natural_task_prompt to ensure clean title without dates/priority/notes
+            parsed_prompt = parse_natural_task_prompt(
+                raw_title if raw_title and len(raw_title.split()) > 2 else message,
+                fallback_category=td.get('category', 'General'),
+                fallback_priority=td.get('priority', 'MEDIUM')
+            )
+
+            title = parsed_prompt['title']
+            priority = td.get('priority') or parsed_prompt['priority']
+            start_date = td.get('start_date') or parsed_prompt['start_date']
+            due_date = td.get('due_date') or parsed_prompt['due_date']
+            category = td.get('category') or parsed_prompt['category']
+            comments_text = td.get('comments') or parsed_prompt['comments']
+
             task = Task.objects.create(
                 user=user,
                 title=title,
-                description=td.get('description', f'Created by AI: {message}'),
-                priority=td.get('priority', 'MEDIUM'),
+                description=td.get('description') or parsed_prompt['description'],
+                priority=priority if priority in ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] else 'MEDIUM',
                 status=td.get('status', 'TODO'),
-                category=td.get('category', 'General'),
-                start_date=td.get('start_date') or timezone.now().strftime('%Y-%m-%d'),
-                due_date=td.get('due_date') or (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%d'),
+                category=category or 'General',
+                start_date=start_date,
+                due_date=due_date,
                 estimated_hours=float(td.get('estimated_hours', 2.0) or 2.0),
                 tags=td.get('tags', ['ai-assistant']),
-                subtasks=td.get('subtasks', []),
+                subtasks=td.get('subtasks', [{'id': '1', 'title': f"Initial planning for {title}", 'completed': False}]),
                 is_ai_generated=True,
             )
+
+            if comments_text and isinstance(comments_text, str) and comments_text.strip():
+                Comment.objects.create(task=task, user=user, content=comments_text.strip())
+
             create_audit_entry(user, 'CREATE_TASK_AI', 'Task', task.id, f"AI Assistant created task: {task.title}", request.META.get('REMOTE_ADDR'))
             return Response({
                 'action': 'CREATE',
-                'reply': parsed_action.get('reply', f'Created task "{task.title}".'),
+                'reply': parsed_action.get('reply') or f'Created task "{task.title}" with {task.priority} priority (Due: {task.due_date}).',
                 'task': TaskSerializer(task).data,
                 'model': used_model,
                 'timestamp': timestamp_str
@@ -812,10 +1006,7 @@ class GeminiAssistantView(views.APIView):
             if not target and parsed_action.get('targetTitle'):
                 target = Task.objects.filter(title__icontains=parsed_action['targetTitle']).first()
             if not target:
-                for t in user_tasks:
-                    if t.title.lower() in message.lower():
-                        target = t
-                        break
+                target = find_task_to_delete(message, user_tasks)
 
             if target:
                 fields = parsed_action.get('updatedFields', {})
@@ -848,17 +1039,16 @@ class GeminiAssistantView(views.APIView):
             target = None
             if target_id:
                 target = Task.objects.filter(pk=target_id).first()
+            if not target:
+                target = find_task_to_delete(message, user_tasks)
             if not target and parsed_action.get('targetTitle'):
                 target = Task.objects.filter(title__icontains=parsed_action['targetTitle']).first()
-            if not target:
-                for t in user_tasks:
-                    if t.title.lower() in message.lower():
-                        target = t
-                        break
 
             if target:
                 del_id = target.id
                 del_title = target.title
+                # Clean up associated comments before deleting task
+                Comment.objects.filter(task=target).delete()
                 target.delete()
                 create_audit_entry(user, 'DELETE_TASK_AI', 'Task', del_id, f"AI Assistant deleted task: {del_title}", request.META.get('REMOTE_ADDR'))
                 return Response({

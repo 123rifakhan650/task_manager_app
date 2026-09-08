@@ -12,10 +12,12 @@ from .views import (
 router = DefaultRouter(trailing_slash=False)
 router.register(r'tasks', TaskViewSet, basename='task')
 router.register(r'recurring', RecurringTaskViewSet, basename='recurring')
+router.register(r'recurring-tasks', RecurringTaskViewSet, basename='recurring-tasks')
 
 router_slash = DefaultRouter(trailing_slash=True)
 router_slash.register(r'tasks', TaskViewSet, basename='task-slash')
 router_slash.register(r'recurring', RecurringTaskViewSet, basename='recurring-slash')
+router_slash.register(r'recurring-tasks', RecurringTaskViewSet, basename='recurring-tasks-slash')
 
 urlpatterns = [
     # Authentication endpoints (both with and without trailing slash)
