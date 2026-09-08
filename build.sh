@@ -25,6 +25,7 @@ echo "Collecting Django static files..."
 python manage.py collectstatic --no-input
 
 echo "Applying Django database migrations..."
+python manage.py makemigrations --no-input || true
 python manage.py migrate --no-input
 
 echo "TaskFlow Django build completed successfully!"

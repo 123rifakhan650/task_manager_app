@@ -13,7 +13,7 @@ services:
     plan: free
     region: oregon
     buildCommand: ./build.sh
-    startCommand: gunicorn taskmanager.wsgi:application --bind 0.0.0.0:$PORT
+    startCommand: python manage.py migrate --no-input && gunicorn taskmanager.wsgi:application --bind 0.0.0.0:$PORT
     healthCheckPath: /api/health/
     envVars:
       - key: PYTHON_VERSION

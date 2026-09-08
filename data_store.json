@@ -38,6 +38,19 @@
       "is_superuser": false,
       "can_view_audit_logs": false,
       "created_at": "2026-09-07T14:04:48.754Z"
+    },
+    {
+      "id": 6,
+      "username": "deploytest",
+      "email": "deploytest@example.com",
+      "first_name": "Deploy",
+      "last_name": "Tester",
+      "password_hash": "sha256_1788865573342",
+      "role": "member",
+      "is_staff": false,
+      "is_superuser": false,
+      "can_view_audit_logs": false,
+      "created_at": "2026-09-08T11:06:13.342Z"
     }
   ],
   "tasks": [
@@ -153,6 +166,83 @@
   ],
   "comments": [],
   "auditLogs": [
+    {
+      "id": 44,
+      "user_id": 6,
+      "username": "deploytest",
+      "action": "REGISTER",
+      "entity_type": "User",
+      "entity_id": "6",
+      "details": "New user registered: deploytest (role: member, audit_access: false)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:06:13.343Z"
+    },
+    {
+      "id": 43,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "LOGIN",
+      "entity_type": "User",
+      "entity_id": "4",
+      "details": "User login successful: iqra15231@gmail.com (role: member)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:04:14.506Z"
+    },
+    {
+      "id": 42,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:02:26.221Z"
+    },
+    {
+      "id": 41,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:02:25.643Z"
+    },
+    {
+      "id": 40,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "LOGIN",
+      "entity_type": "User",
+      "entity_id": "4",
+      "details": "User login successful: sairabanu (role: member)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:02:25.412Z"
+    },
+    {
+      "id": 39,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "LOGIN",
+      "entity_type": "User",
+      "entity_id": "4",
+      "details": "User login successful: sairabanu (role: member)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:02:25.385Z"
+    },
+    {
+      "id": 38,
+      "user_id": 1,
+      "username": "rifakhanum",
+      "action": "INITIALIZE_SYSTEM",
+      "entity_type": "System",
+      "entity_id": "0",
+      "details": "TaskFlow Manager initialized with enterprise architecture",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:02:16.211Z"
+    },
     {
       "id": 37,
       "user_id": 4,
@@ -566,7 +656,7 @@
     "nextCommentId": 3,
     "nextRecurringId": 4,
     "nextOccurrenceId": 17,
-    "nextUserId": 6,
-    "nextAuditId": 38
+    "nextUserId": 7,
+    "nextAuditId": 45
   }
 }

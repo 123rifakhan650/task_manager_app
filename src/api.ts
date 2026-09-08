@@ -46,17 +46,34 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   }
   const response = await fetch(url, { ...options, headers });
   if (!response.ok) {
-    let errMessage = `Request failed: ${response.statusText}`;
+    let errMessage = `Request failed: ${response.statusText || response.status}`;
     try {
       const data = await response.json();
-      if (data.error) errMessage = data.error;
-      else if (data.message) errMessage = data.message;
+      if (data.error) {
+        errMessage = data.error;
+      } else if (data.message) {
+        errMessage = data.message;
+      } else if (data.detail) {
+        errMessage = data.detail;
+      } else if (typeof data === 'object') {
+        const values = Object.values(data);
+        if (values.length > 0) {
+          const first = values[0];
+          if (Array.isArray(first)) errMessage = first.join(', ');
+          else if (typeof first === 'string') errMessage = first;
+        }
+      }
     } catch {
-      // ignore
+      // ignore JSON parse error
     }
     throw new Error(errMessage);
   }
-  return response.json();
+  const result = await response.json();
+  // Protect against paginated DRF responses { count, results: [...] }
+  if (result && typeof result === 'object' && Array.isArray((result as any).results)) {
+    return (result as any).results as T;
+  }
+  return result;
 }
 
 export const api = {
