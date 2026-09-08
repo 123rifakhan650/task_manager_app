@@ -434,6 +434,8 @@ export default function App() {
 
         {activeTab === 'gemini' && (
           <GeminiAiView
+            tasks={tasks}
+            onDeleteTask={handleDeleteTask}
             onGenerateTask={handleGenerateAiTask}
             onConfirmTask={handleConfirmAiTask}
             onAskAssistant={handleAskAssistant}

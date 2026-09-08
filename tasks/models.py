@@ -100,16 +100,22 @@ class RecurringTask(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def generate_occurrences(self, count=5):
-        """Generates the next upcoming occurrences."""
-        curr_date = self.start_date
+        """Generates the next upcoming occurrences beyond any existing occurrences."""
+        last_occ = self.occurrences.order_by('-scheduled_date').first()
+        curr_date = last_occ.scheduled_date if last_occ else self.start_date
         created = []
+        is_first = (last_occ is None)
+
         for i in range(count):
-            if self.frequency == 'DAILY':
-                curr_date = curr_date + timedelta(days=self.interval)
-            elif self.frequency == 'WEEKLY':
-                curr_date = curr_date + timedelta(weeks=self.interval)
-            elif self.frequency == 'MONTHLY':
-                curr_date = curr_date + timedelta(days=30 * self.interval)
+            if not is_first or i > 0:
+                if self.frequency == 'DAILY':
+                    curr_date = curr_date + timedelta(days=self.interval)
+                elif self.frequency == 'WEEKLY':
+                    curr_date = curr_date + timedelta(weeks=self.interval)
+                elif self.frequency == 'MONTHLY':
+                    curr_date = curr_date + timedelta(days=30 * self.interval)
+                else:
+                    curr_date = curr_date + timedelta(days=self.interval)
             
             if self.end_date and curr_date > self.end_date:
                 break

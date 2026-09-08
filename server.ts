@@ -899,7 +899,7 @@ app.post('/api/comments', (req, res) => {
 });
 
 // Recurring Tasks & Occurrences
-app.get('/api/recurring', (req, res) => {
+app.get(['/api/recurring', '/api/recurring-tasks'], (req, res) => {
   const user = getAuthenticatedUser(req);
   const userRecurring = recurringTasks.filter(r => r.user_id === user.id || user.id === 1);
   const enriched = userRecurring.map(r => ({
@@ -909,7 +909,7 @@ app.get('/api/recurring', (req, res) => {
   res.json(enriched);
 });
 
-app.post('/api/recurring', (req, res) => {
+app.post(['/api/recurring', '/api/recurring-tasks'], (req, res) => {
   const user = getAuthenticatedUser(req);
   const {
     title,
@@ -984,7 +984,7 @@ app.post('/api/recurring', (req, res) => {
   res.status(201).json({ ...newRecurring, occurrences: createdOccurrences });
 });
 
-app.post('/api/recurring/:id/generate-occurrences', (req, res) => {
+app.post(['/api/recurring/:id/generate-occurrences', '/api/recurring-tasks/:id/generate-occurrences'], (req, res) => {
   const user = getAuthenticatedUser(req);
   const recurringId = parseInt(req.params.id, 10);
   const recurring = recurringTasks.find(r => r.id === recurringId);
@@ -992,19 +992,32 @@ app.post('/api/recurring/:id/generate-occurrences', (req, res) => {
 
   const count = Math.min(60, Math.max(1, Number(req.body.count) || 4));
   const created: TaskOccurrenceRecord[] = [];
-  const existingDates = new Set(taskOccurrences.filter(o => o.recurring_task_id === recurringId).map(o => o.scheduled_date));
+  const taskOccs = taskOccurrences.filter(o => o.recurring_task_id === recurringId);
+  const existingDates = new Set(taskOccs.map(o => o.scheduled_date));
 
-  const baseDate = new Date();
+  // Advance from the latest scheduled date to ensure future occurrences are generated
+  let baseDate = new Date();
+  if (taskOccs.length > 0) {
+    const sortedDates = taskOccs.map(o => o.scheduled_date).sort();
+    const lastDateStr = sortedDates[sortedDates.length - 1];
+    const [y, m, d] = lastDateStr.split('-').map(Number);
+    baseDate = new Date(y, m - 1, d);
+  } else if (recurring.start_date) {
+    const [y, m, d] = recurring.start_date.split('-').map(Number);
+    baseDate = new Date(y, m - 1, d);
+  }
+
+  const numInterval = Math.max(1, Number(recurring.interval) || 1);
   for (let i = 1; i <= count; i++) {
     const occDate = new Date(baseDate);
     if (recurring.frequency === 'DAILY') {
-      occDate.setDate(occDate.getDate() + (i * recurring.interval));
+      occDate.setDate(occDate.getDate() + (i * numInterval));
     } else if (recurring.frequency === 'WEEKLY') {
-      occDate.setDate(occDate.getDate() + (i * 7 * recurring.interval));
+      occDate.setDate(occDate.getDate() + (i * 7 * numInterval));
     } else if (recurring.frequency === 'MONTHLY') {
-      occDate.setMonth(occDate.getMonth() + (i * recurring.interval));
+      occDate.setMonth(occDate.getMonth() + (i * numInterval));
     } else {
-      occDate.setDate(occDate.getDate() + i);
+      occDate.setDate(occDate.getDate() + (i * numInterval));
     }
     const dateStr = occDate.toISOString().split('T')[0];
     if (!existingDates.has(dateStr)) {
@@ -1087,7 +1100,7 @@ app.patch('/api/occurrences/:id/notes', (req, res) => {
 });
 
 // Edit Recurring Task
-app.put('/api/recurring/:id', (req, res) => {
+app.put(['/api/recurring/:id', '/api/recurring-tasks/:id'], (req, res) => {
   const user = getAuthenticatedUser(req);
   const recurringId = parseInt(req.params.id, 10);
   const recurring = recurringTasks.find(r => r.id === recurringId);
@@ -1116,7 +1129,7 @@ app.put('/api/recurring/:id', (req, res) => {
 });
 
 // Delete Recurring Task & Associated Occurrences
-app.delete('/api/recurring/:id', (req, res) => {
+app.delete(['/api/recurring/:id', '/api/recurring-tasks/:id'], (req, res) => {
   const user = getAuthenticatedUser(req);
   const recurringId = parseInt(req.params.id, 10);
   const index = recurringTasks.findIndex(r => r.id === recurringId);
@@ -1313,6 +1326,183 @@ async function generateGeminiContentWithRetry(
   throw lastError;
 }
 
+// Intelligent natural language task extractor
+function parseNaturalTaskPrompt(input: string, fallbackCategory = 'General', fallbackPriority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' = 'MEDIUM') {
+  let text = (input || '').trim();
+
+  // Strip leading creation command words
+  text = text.replace(/^(?:please\s+)?(?:create|add|make|schedule|new|generate)\s+(?:a\s+)?(?:new\s+)?(?:task\s*:?|routine\s*:?|item\s*:?)?/i, '').trim();
+
+  // 1. Extract comments / notes / pending items
+  let comments = '';
+  const commentsMatch = text.match(/\b(?:comments?|notes?|pending(?:\s+items?)?)\s*[:=\-]?\s*(.+)$/i);
+  if (commentsMatch) {
+    comments = commentsMatch[1].trim();
+    text = text.slice(0, commentsMatch.index).trim();
+  }
+
+  // 2. Extract priority
+  let priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' = fallbackPriority;
+  const prioMatch = text.match(/\b(?:priority|prio)\s*[:=\-]?\s*(URGENT|HIGH|MEDIUM|LOW)\b/i);
+  if (prioMatch) {
+    priority = prioMatch[1].toUpperCase() as any;
+    text = (text.slice(0, prioMatch.index) + ' ' + text.slice(prioMatch.index! + prioMatch[0].length)).trim();
+  } else {
+    const standalonePrio = text.match(/\b(URGENT|HIGH|MEDIUM|LOW)\b/);
+    if (standalonePrio) {
+      priority = standalonePrio[1].toUpperCase() as any;
+      text = (text.slice(0, standalonePrio.index) + ' ' + text.slice(standalonePrio.index! + standalonePrio[0].length)).trim();
+    }
+  }
+
+  // Date parsing helper
+  const now = new Date();
+  const parseRelativeOrDate = (rawStr: string, defaultDate: Date): string => {
+    const s = rawStr.toLowerCase().trim();
+    if (s === 'today') {
+      return now.toISOString().split('T')[0];
+    }
+    if (s === 'tomorrow') {
+      const d = new Date(now);
+      d.setDate(d.getDate() + 1);
+      return d.toISOString().split('T')[0];
+    }
+    if (s === 'day after tomorrow') {
+      const d = new Date(now);
+      d.setDate(d.getDate() + 2);
+      return d.toISOString().split('T')[0];
+    }
+    if (s.includes('next week')) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + 7);
+      return d.toISOString().split('T')[0];
+    }
+    const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    for (let i = 0; i < weekdays.length; i++) {
+      if (s.includes(weekdays[i])) {
+        const d = new Date(now);
+        let diff = i - d.getDay();
+        if (diff <= 0) diff += 7;
+        if (s.includes('next') && diff < 7) diff += 7;
+        d.setDate(d.getDate() + diff);
+        return d.toISOString().split('T')[0];
+      }
+    }
+    const parsed = new Date(rawStr);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString().split('T')[0];
+    }
+    return defaultDate.toISOString().split('T')[0];
+  };
+
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const nextFriday = new Date(today);
+  let fridayDiff = 5 - today.getDay();
+  if (fridayDiff <= 0) fridayDiff += 7;
+  nextFriday.setDate(nextFriday.getDate() + fridayDiff);
+
+  let start_date = today.toISOString().split('T')[0];
+  let due_date = tomorrow.toISOString().split('T')[0];
+
+  // 3. Extract due date
+  const dueMatch = text.match(/\b(?:due(?:\s*date)?|by|deadline)\s*[:=\-]?\s*([a-zA-Z0-9_\-\/]+(?:\s+[a-zA-Z0-9_\-\/]+)?)/i);
+  if (dueMatch) {
+    due_date = parseRelativeOrDate(dueMatch[1], nextFriday);
+    text = (text.slice(0, dueMatch.index) + ' ' + text.slice(dueMatch.index! + dueMatch[0].length)).trim();
+  }
+
+  // 4. Extract start date
+  const startMatch = text.match(/\b(?:start(?:s|ing)?(?:\s*date)?|from)\s*[:=\-]?\s*([a-zA-Z0-9_\-\/]+(?:\s+[a-zA-Z0-9_\-\/]+)?)/i);
+  if (startMatch) {
+    start_date = parseRelativeOrDate(startMatch[1], today);
+    text = (text.slice(0, startMatch.index) + ' ' + text.slice(startMatch.index! + startMatch[0].length)).trim();
+  }
+
+  // 5. Extract category
+  let category = fallbackCategory || 'General';
+  const catMatch = text.match(/\b(?:category|type)\s*[:=\-]?\s*([a-zA-Z0-9_\-]+)/i);
+  if (catMatch) {
+    category = catMatch[1];
+    text = (text.slice(0, catMatch.index) + ' ' + text.slice(catMatch.index! + catMatch[0].length)).trim();
+  }
+
+  // 6. Clean task title
+  let cleanTitle = text
+    .replace(/\s+/g, ' ')
+    .replace(/^[:\-–—,\s]+|[:\-–—,\s]+$/g, '')
+    .trim();
+
+  if (!cleanTitle) {
+    cleanTitle = 'New Task';
+  } else {
+    cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
+  }
+
+  return {
+    title: cleanTitle,
+    start_date,
+    due_date,
+    priority,
+    category,
+    comments,
+    description: cleanTitle + (comments ? ` (Notes: ${comments})` : ''),
+  };
+}
+
+// Resilient Task deletion finder supporting ID, exact title, partial substring, word tokens, and referential terms
+function findTaskToDelete(query: string, userTasks: TaskRecord[]): TaskRecord | undefined {
+  if (!userTasks || userTasks.length === 0) return undefined;
+
+  const raw = (query || '').trim();
+  const lower = raw.toLowerCase();
+
+  // 1. Direct ID match: "#1", "task 1", "id 1", "1"
+  const idMatch = raw.match(/#?(\d+)/);
+  if (idMatch) {
+    const searchId = parseInt(idMatch[1], 10);
+    const byId = userTasks.find(t => t.id === searchId);
+    if (byId) return byId;
+  }
+
+  // 2. Clean command verbs
+  const cleaned = lower
+    .replace(/^(?:please\s+)?(?:delete|remove|cancel|drop|clear)\s+(?:a\s+)?(?:the\s+)?(?:task\s*:?|item\s*:?)?/i, '')
+    .trim();
+
+  // 3. Referential expressions
+  if (!cleaned || cleaned === 'it' || cleaned === 'that' || cleaned === 'this' || cleaned === 'last' || cleaned === 'last task' || cleaned === 'the task' || cleaned === 'task') {
+    return userTasks[0];
+  }
+
+  // 4. Exact title match
+  const exact = userTasks.find(t => t.title.toLowerCase() === cleaned);
+  if (exact) return exact;
+
+  // 5. Title substring or target contains title
+  const sub = userTasks.find(t => t.title.toLowerCase().includes(cleaned) || cleaned.includes(t.title.toLowerCase()));
+  if (sub) return sub;
+
+  // 6. Token-based word matching
+  const tokens = cleaned.split(/\s+/).filter(w => w.length > 2);
+  if (tokens.length > 0) {
+    const tokenMatch = userTasks.find(t => {
+      const tLower = t.title.toLowerCase();
+      return tokens.every(tok => tLower.includes(tok));
+    });
+    if (tokenMatch) return tokenMatch;
+
+    const anyTokenMatch = userTasks.find(t => {
+      const tLower = t.title.toLowerCase();
+      return tokens.some(tok => tLower.includes(tok));
+    });
+    if (anyTokenMatch) return anyTokenMatch;
+  }
+
+  return undefined;
+}
+
 // Create Task using Gemini & Preview AI Task
 app.post('/api/gemini/generate-task', async (req, res) => {
   const user = getAuthenticatedUser(req);
@@ -1337,20 +1527,31 @@ Category hint: "${category}"
 Default priority hint: "${priority}"
 Current Date: "${todayStr}"
 
+Example:
+Prompt: "Prepare presentation start tomorrow due Friday priority HIGH comments draft slides first"
+Desired output:
+{
+  "title": "Prepare presentation",
+  "start_date": "YYYY-MM-DD",
+  "due_date": "YYYY-MM-DD",
+  "description": "Prepare presentation slides and materials",
+  "priority": "HIGH",
+  "comments": "draft slides first"
+}
+
+CRITICAL REQUIREMENT:
+The "title" field MUST ONLY contain the concise, clean task name (e.g. "Prepare presentation", "Pay electricity bill").
+NEVER include dates, "start tomorrow", "due Friday", priority, or comments in the title field!
+
 Required JSON structure:
 {
-  "title": "Clear, concise task name (e.g. Prepare presentation, Pay bill, Review report)",
+  "title": "Clear, concise task name ONLY",
   "start_date": "YYYY-MM-DD",
   "due_date": "YYYY-MM-DD",
   "description": "Clear explanation of what needs to be done",
   "priority": "LOW" | "MEDIUM" | "HIGH" | "URGENT",
   "comments": "Any comments, notes, or pending items mentioned (or empty string)"
-}
-
-STRICT INSTRUCTIONS:
-- DO NOT write code.
-- DO NOT invent complex software engineering architectures, database setups, or DevOps setups.
-- Focus strictly on the task to be done.`,
+}`,
           config: {
             responseMimeType: 'application/json',
             responseSchema: {
@@ -1385,32 +1586,18 @@ STRICT INSTRUCTIONS:
       }
     }
 
-    if (!generatedResult) {
-      const lowerPrompt = prompt.toLowerCase();
-      let extractedPriority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' = 'MEDIUM';
-      if (lowerPrompt.includes('urgent')) extractedPriority = 'URGENT';
-      else if (lowerPrompt.includes('high')) extractedPriority = 'HIGH';
-      else if (lowerPrompt.includes('low')) extractedPriority = 'LOW';
-
-      let cleanTitle = prompt.replace(/^(create task|add task|make task|task:?)\s*/i, '').trim();
-      cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
-      if (cleanTitle.length > 80) cleanTitle = cleanTitle.slice(0, 77) + '...';
-
-      let commentsStr = '';
-      if (lowerPrompt.includes('comments') || lowerPrompt.includes('pending') || lowerPrompt.includes('note')) {
-        const match = prompt.match(/(?:comments?|pending|notes?)\s*[:\-]?\s*(.+)$/i);
-        if (match) commentsStr = match[1].trim();
+    // Sanitize title if Gemini leaked metadata into title, or use heuristic parser
+    if (generatedResult && generatedResult.title) {
+      if (/(?:start|due|priority|comments?|notes?)\s+/i.test(generatedResult.title) || generatedResult.title.length > 55) {
+        const sanitized = parseNaturalTaskPrompt(generatedResult.title, category, priority);
+        generatedResult.title = sanitized.title;
+        if (!generatedResult.comments && sanitized.comments) generatedResult.comments = sanitized.comments;
+        if (sanitized.start_date) generatedResult.start_date = sanitized.start_date;
+        if (sanitized.due_date) generatedResult.due_date = sanitized.due_date;
+        if (sanitized.priority) generatedResult.priority = sanitized.priority;
       }
-
-      generatedResult = {
-        title: cleanTitle || 'New Task',
-        start_date: todayStr,
-        due_date: tomorrowStr,
-        description: prompt,
-        priority: extractedPriority,
-        category: category || 'General',
-        comments: commentsStr || (lowerPrompt.includes('pending') ? 'Pending requirements' : ''),
-      };
+    } else {
+      generatedResult = parseNaturalTaskPrompt(prompt, category, priority);
     }
 
     addAuditLog(user, 'GEMINI_GENERATE', 'AI', '0', `Generated AI task preview: "${generatedResult.title}"`, req.ip);
@@ -1423,15 +1610,7 @@ STRICT INSTRUCTIONS:
     });
   } catch (error: any) {
     console.warn('Gemini task generator notice:', error?.message || error);
-    const fallback = {
-      title: prompt.slice(0, 60),
-      start_date: todayStr,
-      due_date: tomorrowStr,
-      description: prompt,
-      priority: priority || 'MEDIUM',
-      category: category || 'General',
-      comments: '',
-    };
+    const fallback = parseNaturalTaskPrompt(prompt, category, priority);
     res.json({
       preview: fallback,
       model: 'fallback-generator',
@@ -1648,22 +1827,19 @@ Respond ONLY with a valid JSON object (no markdown, no backticks, just raw json)
           comment: commentContent,
           reply: match ? `Comment on task "${match.title}" has been updated.` : 'No matching task found to update comment.',
         };
-      } else if (lowerMsg.startsWith('delete') || lowerMsg.startsWith('remove')) {
-        let match = userTasks.find(t => lowerMsg.includes(t.title.toLowerCase()));
-        if (!match) {
-          const idMatch = lowerMsg.match(/#?(\d+)/);
-          if (idMatch) match = userTasks.find(t => t.id === parseInt(idMatch[1], 10));
-        }
+      } else if (lowerMsg.startsWith('delete') || lowerMsg.startsWith('remove') || lowerMsg.startsWith('cancel')) {
+        let match = findTaskToDelete(message, userTasks);
         if (match) {
           parsedAction = {
             action: 'DELETE',
+            targetTaskId: match.id,
             targetTitle: match.title,
             reply: `Task "${match.title}" has been deleted from your tracker.`,
           };
         } else {
           parsedAction = {
             action: 'INFO',
-            reply: `I could not find a task matching "${message.replace(/^(delete|remove)\s*/i, '')}" to delete.`,
+            reply: `I could not find a task matching "${message.replace(/^(?:please\s+)?(?:delete|remove)\s*/i, '')}" to delete.`,
           };
         }
       } else if (lowerMsg.startsWith('edit') || lowerMsg.startsWith('update') || lowerMsg.startsWith('change')) {
@@ -1705,31 +1881,32 @@ Respond ONLY with a valid JSON object (no markdown, no backticks, just raw json)
           };
         }
       } else {
-        let cleanTitle = message.replace(/^(create task|add task|make task|task:?)\s*/i, '').trim();
-        cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
-        if (cleanTitle.length > 80) cleanTitle = cleanTitle.slice(0, 77) + '...';
-        let extractedPriority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' = 'MEDIUM';
-        if (lowerMsg.includes('urgent')) extractedPriority = 'URGENT';
-        else if (lowerMsg.includes('high')) extractedPriority = 'HIGH';
-        else if (lowerMsg.includes('low')) extractedPriority = 'LOW';
-        let commentsStr = '';
-        if (lowerMsg.includes('comments') || lowerMsg.includes('pending') || lowerMsg.includes('note')) {
-          const m = message.match(/(?:comments?|pending|notes?)\s*[:\-]?\s*(.+)$/i);
-          if (m) commentsStr = m[1].trim();
-        }
+        const parsed = parseNaturalTaskPrompt(message);
         parsedAction = {
           action: 'CREATE',
-          reply: `Task "${cleanTitle}" has been created and added to your tracker.`,
+          reply: `Task "${parsed.title}" has been created and added to your tracker.`,
           task: {
-            title: cleanTitle || 'New Task',
-            start_date: todayStr,
-            due_date: tomorrowStr,
-            description: message,
-            priority: extractedPriority,
+            title: parsed.title,
+            start_date: parsed.start_date,
+            due_date: parsed.due_date,
+            description: parsed.description,
+            priority: parsed.priority,
             status: 'TODO',
-            comments: commentsStr || (lowerMsg.includes('pending') ? 'Pending requirements' : ''),
+            comments: parsed.comments,
           },
         };
+      }
+    }
+
+    // Sanitize title if AI output leaked parameters into title
+    if (parsedAction && parsedAction.task && parsedAction.task.title) {
+      if (/(?:start|due|priority|comments?|notes?)\s+/i.test(parsedAction.task.title) || parsedAction.task.title.length > 60) {
+        const sanitized = parseNaturalTaskPrompt(parsedAction.task.title);
+        parsedAction.task.title = sanitized.title;
+        if (!parsedAction.task.comments && sanitized.comments) parsedAction.task.comments = sanitized.comments;
+        if (sanitized.start_date) parsedAction.task.start_date = sanitized.start_date;
+        if (sanitized.due_date) parsedAction.task.due_date = sanitized.due_date;
+        if (sanitized.priority) parsedAction.task.priority = sanitized.priority;
       }
     }
 
@@ -1921,20 +2098,23 @@ Respond ONLY with a valid JSON object (no markdown, no backticks, just raw json)
 
     // Execute DELETE
     if (parsedAction.action === 'DELETE') {
-      const targetTitle = (parsedAction.targetTitle || '').toLowerCase();
       let target = userTasks.find(t => t.id === parsedAction.targetTaskId);
-      if (!target && targetTitle) {
-        target = userTasks.find(t => t.title.toLowerCase().includes(targetTitle) || targetTitle.includes(t.title.toLowerCase()));
+      if (!target && parsedAction.targetTitle) {
+        target = findTaskToDelete(parsedAction.targetTitle, userTasks);
       }
       if (!target) {
-        const lower = message.toLowerCase();
-        target = userTasks.find(t => lower.includes(t.title.toLowerCase()));
+        target = findTaskToDelete(message, userTasks);
       }
       if (target) {
         const deletedId = target.id;
         const deletedTitle = target.title;
         const idx = tasks.findIndex(t => t.id === deletedId);
         if (idx !== -1) tasks.splice(idx, 1);
+        for (let i = comments.length - 1; i >= 0; i--) {
+          if (comments[i].task_id === deletedId) {
+            comments.splice(i, 1);
+          }
+        }
         saveData();
         addAuditLog(user, 'DELETE_TASK_AI', 'Task', deletedId, `AI deleted task: "${deletedTitle}"`, req.ip);
         return res.json({

@@ -4,15 +4,19 @@ import {
   Calendar, Clock, AlertCircle, RefreshCw, Check,
   MessageSquare, Trash2, Edit3, Plus
 } from 'lucide-react';
-import { GeminiTaskPreview, Priority } from '../types';
+import { GeminiTaskPreview, Priority, Task } from '../types';
 
 interface GeminiAiViewProps {
+  tasks?: Task[];
+  onDeleteTask?: (taskId: number) => Promise<void>;
   onGenerateTask: (prompt: string, category: string, priority: Priority) => Promise<GeminiTaskPreview>;
   onConfirmTask: (preview: GeminiTaskPreview, originalPrompt: string) => Promise<void>;
   onAskAssistant: (message: string) => Promise<string>;
 }
 
 export const GeminiAiView: React.FC<GeminiAiViewProps> = ({
+  tasks = [],
+  onDeleteTask,
   onGenerateTask,
   onConfirmTask,
   onAskAssistant,
@@ -22,6 +26,7 @@ export const GeminiAiView: React.FC<GeminiAiViewProps> = ({
   const [category, setCategory] = useState('General');
   const [priority, setPriority] = useState<Priority>('HIGH');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
 
   // Preview state
   const [preview, setPreview] = useState<GeminiTaskPreview | null>(null);
@@ -93,10 +98,11 @@ export const GeminiAiView: React.FC<GeminiAiViewProps> = ({
   ];
 
   const quickAssistantActions = [
-    'Create task: Buy groceries start today due today priority LOW',
-    'Set priority of Buy groceries to URGENT',
-    'Mark task Buy groceries as COMPLETED',
-    'Delete task Buy groceries',
+    'Create task: Prepare presentation start tomorrow due Friday priority HIGH comments draft slides first',
+    'Delete task: Prepare presentation',
+    'Set priority of Prepare presentation to URGENT',
+    'Mark task Prepare presentation as COMPLETED',
+    'Delete last task',
   ];
 
   return (
@@ -294,6 +300,84 @@ export const GeminiAiView: React.FC<GeminiAiViewProps> = ({
               </div>
             </div>
           )}
+
+          {/* AI Tasks in Tracker */}
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-3">
+            <div className="pb-2 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-400" />
+                <h3 className="text-sm font-semibold text-white">AI Tasks in Tracker</h3>
+              </div>
+              <span className="text-[11px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+                {tasks.filter(t => t.is_ai_generated || (t.tags && t.tags.includes('ai-task'))).length} Tasks
+              </span>
+            </div>
+
+            {tasks.filter(t => t.is_ai_generated || (t.tags && t.tags.includes('ai-task'))).length === 0 ? (
+              <p className="text-xs text-slate-500 py-3 text-center">
+                No AI-generated tasks in tracker yet. Generate one above or use the assistant chat.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {tasks
+                  .filter(t => t.is_ai_generated || (t.tags && t.tags.includes('ai-task')))
+                  .map(task => (
+                    <div
+                      key={task.id}
+                      className="p-3 bg-slate-800/60 hover:bg-slate-800 rounded-lg border border-slate-700/60 flex items-center justify-between gap-3 transition"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-white truncate">{task.title}</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold uppercase ${
+                              task.priority === 'URGENT'
+                                ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                                : task.priority === 'HIGH'
+                                ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                                : 'bg-blue-950 text-blue-300 border border-blue-800'
+                            }`}
+                          >
+                            {task.priority}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-1">
+                          <span>Due: {task.due_date || 'No deadline'}</span>
+                          {task.comments_text && (
+                            <span className="truncate max-w-[180px] text-amber-300/90">
+                              Note: {task.comments_text}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {onDeleteTask && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setDeletingTaskId(task.id);
+                            try {
+                              await onDeleteTask(task.id);
+                            } finally {
+                              setDeletingTaskId(null);
+                            }
+                          }}
+                          disabled={deletingTaskId === task.id}
+                          className="p-2 rounded bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-800 transition shrink-0"
+                          title="Delete AI task"
+                        >
+                          {deletingTaskId === task.id ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right Column: AI Assistant for Create, Edit, Delete */}
