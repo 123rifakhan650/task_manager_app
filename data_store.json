@@ -55,6 +55,26 @@
   ],
   "tasks": [
     {
+      "id": 6,
+      "user_id": 4,
+      "username": "sairabanu",
+      "title": "Test Direct Task Creation",
+      "start_date": "2026-09-08",
+      "due_date": "2026-09-08",
+      "description": "Testing create",
+      "priority": "HIGH",
+      "status": "TODO",
+      "category": "General",
+      "estimated_hours": 1,
+      "actual_hours": 0,
+      "tags": [],
+      "is_ai_generated": false,
+      "subtasks": [],
+      "completed_at": null,
+      "created_at": "2026-09-08T11:16:36.493Z",
+      "updated_at": "2026-09-08T11:16:36.493Z"
+    },
+    {
       "id": 5,
       "user_id": 4,
       "username": "sairabanu",
@@ -166,6 +186,116 @@
   ],
   "comments": [],
   "auditLogs": [
+    {
+      "id": 54,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "CREATE_TASK",
+      "entity_type": "Task",
+      "entity_id": "6",
+      "details": "Created task: \"Test Direct Task Creation\" [HIGH]",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:16:36.494Z"
+    },
+    {
+      "id": 53,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:13:16.008Z"
+    },
+    {
+      "id": 52,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:13:15.930Z"
+    },
+    {
+      "id": 51,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:13:15.731Z"
+    },
+    {
+      "id": 50,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:13:15.573Z"
+    },
+    {
+      "id": 49,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:06:52.712Z"
+    },
+    {
+      "id": 48,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:06:52.628Z"
+    },
+    {
+      "id": 47,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:06:52.509Z"
+    },
+    {
+      "id": 46,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:06:52.332Z"
+    },
+    {
+      "id": 45,
+      "user_id": 1,
+      "username": "rifakhanum",
+      "action": "INITIALIZE_SYSTEM",
+      "entity_type": "System",
+      "entity_id": "0",
+      "details": "TaskFlow Manager initialized with enterprise architecture",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-08T11:06:43.981Z"
+    },
     {
       "id": 44,
       "user_id": 6,
@@ -652,11 +782,11 @@
     }
   ],
   "nextIds": {
-    "nextTaskId": 6,
+    "nextTaskId": 7,
     "nextCommentId": 3,
     "nextRecurringId": 4,
     "nextOccurrenceId": 17,
     "nextUserId": 7,
-    "nextAuditId": 45
+    "nextAuditId": 55
   }
 }

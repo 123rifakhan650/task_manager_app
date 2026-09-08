@@ -44,6 +44,7 @@ class TaskSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
     comment_count = serializers.SerializerMethodField()
+    comments_text = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = Task
@@ -51,7 +52,8 @@ class TaskSerializer(serializers.ModelSerializer):
             'id', 'user', 'username', 'title', 'description', 'priority',
             'status', 'category', 'start_date', 'due_date', 'estimated_hours',
             'actual_hours', 'tags', 'subtasks', 'is_ai_generated',
-            'completed_at', 'created_at', 'updated_at', 'comments', 'comment_count'
+            'completed_at', 'created_at', 'updated_at', 'comments', 'comment_count',
+            'comments_text'
         ]
         read_only_fields = ['id', 'user', 'created_at', 'updated_at', 'completed_at']
 
