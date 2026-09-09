@@ -104,13 +104,7 @@ export default function App() {
     const activeUser = userOverride || currentUser;
     if (!activeUser) return;
     try {
-      const [
-        tasksData,
-        recurringData,
-        occurrencesData,
-        metricsData,
-        statsData,
-      ] = await Promise.all([
+      const [tasksRes, recurringRes, occRes, metricsRes, statsRes] = await Promise.allSettled([
         api.getTasks({
           search: searchQuery,
           status: statusFilter,
@@ -122,16 +116,17 @@ export default function App() {
         api.getMetrics(),
         api.getDashboardAnalytics(),
       ]);
-      setTasks(tasksData);
-      setRecurringTasks(recurringData);
-      setOccurrences(occurrencesData);
-      setMetrics(metricsData);
-      setStats(statsData);
+
+      if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value);
+      if (recurringRes.status === 'fulfilled') setRecurringTasks(recurringRes.value);
+      if (occRes.status === 'fulfilled') setOccurrences(occRes.value);
+      if (metricsRes.status === 'fulfilled') setMetrics(metricsRes.value);
+      if (statsRes.status === 'fulfilled') setStats(statsRes.value);
 
       try {
         const auditData = await api.getAuditLogs();
         setAuditLogs(auditData);
-      } catch (auditErr) {
+      } catch {
         setAuditLogs([]);
       }
     } catch (err) {
@@ -147,36 +142,57 @@ export default function App() {
 
   // Task Actions
   const handleCreateOrUpdateTask = async (taskData: Partial<Task>) => {
-    if (editingTask) {
-      await api.updateTask(editingTask.id, taskData);
-      showToast('Task updated successfully');
-    } else {
-      await api.createTask(taskData);
-      showToast('Task created successfully');
+    try {
+      if (editingTask) {
+        const updated = await api.updateTask(editingTask.id, taskData);
+        setTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, ...updated } : t));
+        showToast('Task updated successfully');
+      } else {
+        const created = await api.createTask(taskData);
+        setTasks(prev => [created, ...prev]);
+        showToast('Task created successfully');
+      }
+      setEditingTask(null);
+      await refreshAllData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save task', 'error');
+      throw err;
     }
-    setEditingTask(null);
-    await refreshAllData();
   };
 
   const handleChangePriority = async (taskId: number, newPriority: Priority) => {
-    await api.changePriority(taskId, newPriority);
-    showToast(`Priority updated to ${newPriority}`);
-    await refreshAllData();
+    try {
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, priority: newPriority } : t));
+      await api.changePriority(taskId, newPriority);
+      showToast(`Priority updated to ${newPriority}`);
+      await refreshAllData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update priority', 'error');
+      await refreshAllData();
+    }
   };
 
   const handleChangeStatus = async (taskId: number, newStatus: Status) => {
-    await api.changeStatus(taskId, newStatus);
-    showToast(`Status updated to ${newStatus}`);
-    await refreshAllData();
+    try {
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+      await api.changeStatus(taskId, newStatus);
+      showToast(`Status updated to ${newStatus}`);
+      await refreshAllData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update status', 'error');
+      await refreshAllData();
+    }
   };
 
   const handleCompleteTask = async (taskId: number) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'COMPLETED' } : t));
     await api.completeTask(taskId);
     showToast('Task marked completed');
     await refreshAllData();
   };
 
   const handleReopenTask = async (taskId: number) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'IN_PROGRESS' } : t));
     await api.reopenTask(taskId);
     showToast('Task reopened into In Progress');
     await refreshAllData();
@@ -198,15 +214,37 @@ export default function App() {
 
   // Recurring Tasks Actions
   const handleCreateRecurring = async (payload: any) => {
-    await api.createRecurring(payload);
-    showToast('Recurring task created successfully');
-    await refreshAllData();
+    try {
+      const created = await api.createRecurring(payload);
+      if (created) {
+        setRecurringTasks(prev => [created, ...prev.filter(r => r.id !== created.id)]);
+        if (created.occurrences && created.occurrences.length > 0) {
+          setOccurrences(prev => [
+            ...created.occurrences,
+            ...prev.filter(o => o.recurring_task_id !== created.id),
+          ]);
+        }
+      }
+      showToast('Recurring task created successfully');
+      await refreshAllData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to create recurring task', 'error');
+      throw err;
+    }
   };
 
   const handleUpdateRecurring = async (id: number, payload: any) => {
-    await api.updateRecurring(id, payload);
-    showToast('Recurring task updated successfully');
-    await refreshAllData();
+    try {
+      const updated = await api.updateRecurring(id, payload);
+      if (updated) {
+        setRecurringTasks(prev => prev.map(r => r.id === id ? { ...r, ...updated } : r));
+      }
+      showToast('Recurring task updated successfully');
+      await refreshAllData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update recurring task', 'error');
+      throw err;
+    }
   };
 
   const handleDeleteRecurring = async (id: number) => {
@@ -276,12 +314,32 @@ export default function App() {
   };
 
   const handleAskAssistant = async (message: string): Promise<string> => {
-    const res = await api.askAiAssistant(message);
-    if (res.action && res.action !== 'INFO') {
-      await refreshAllData();
-      showToast(res.reply, 'success');
+    try {
+      const res = await api.askAiAssistant(message);
+      if (res.action && res.action !== 'INFO') {
+        if (res.action === 'EDIT' && (res as any).task) {
+          const updatedTask = (res as any).task;
+          setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+        } else if (res.action === 'CREATE' && (res as any).task) {
+          setTasks(prev => [(res as any).task, ...prev]);
+        } else if (res.action === 'DELETE' && (res as any).deletedId) {
+          setTasks(prev => prev.filter(t => t.id !== (res as any).deletedId));
+        } else if (res.action === 'CREATE_RECURRING' && (res as any).recurring) {
+          const rec = (res as any).recurring;
+          setRecurringTasks(prev => [rec, ...prev.filter(r => r.id !== rec.id)]);
+          if (rec.occurrences) {
+            setOccurrences(prev => [...rec.occurrences, ...prev]);
+          }
+        }
+        await refreshAllData();
+        showToast(res.reply, 'success');
+      }
+      return res.reply;
+    } catch (err: any) {
+      const errMsg = err.message || 'Error processing request';
+      showToast(errMsg, 'error');
+      return `Error: ${errMsg}`;
     }
-    return res.reply;
   };
 
   // Auth Handlers

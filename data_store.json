@@ -62,7 +62,7 @@
       "start_date": "2026-09-09",
       "due_date": "2026-09-09",
       "description": "",
-      "priority": "URGENT",
+      "priority": "LOW",
       "status": "TODO",
       "category": "General",
       "estimated_hours": 1,
@@ -72,7 +72,7 @@
       "subtasks": [],
       "completed_at": null,
       "created_at": "2026-09-09T11:45:35.100Z",
-      "updated_at": "2026-09-09T11:45:59.607Z"
+      "updated_at": "2026-09-09T12:17:57.065Z"
     },
     {
       "id": 6,
@@ -130,6 +130,51 @@
       "end_date": null,
       "is_active": true,
       "created_at": "2026-09-09T11:49:15.491Z"
+    },
+    {
+      "id": 9,
+      "user_id": 4,
+      "title": "Weekly Status Meeting",
+      "description": "Weekly review of progress",
+      "frequency": "WEEKLY",
+      "interval": 1,
+      "days_of_week": "Mon,Wed,Fri",
+      "priority": "MEDIUM",
+      "category": "Routine",
+      "start_date": "2026-09-09",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2026-09-09T12:11:46.478Z"
+    },
+    {
+      "id": 10,
+      "user_id": 4,
+      "title": "Daily Standup Routine",
+      "description": "Morning team check-in",
+      "frequency": "DAILY",
+      "interval": 1,
+      "days_of_week": "Mon,Wed,Fri",
+      "priority": "HIGH",
+      "category": "Routine",
+      "start_date": "2026-09-09",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2026-09-09T12:13:46.610Z"
+    },
+    {
+      "id": 11,
+      "user_id": 4,
+      "title": "Automated Daily Standup",
+      "description": "Daily morning synchronization",
+      "frequency": "DAILY",
+      "interval": 1,
+      "days_of_week": "Mon,Wed,Fri",
+      "priority": "LOW",
+      "category": "Routine",
+      "start_date": "2026-09-09",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2026-09-09T12:17:57.079Z"
     }
   ],
   "taskOccurrences": [
@@ -142,10 +187,294 @@
       "completed_at": null,
       "notes": "Initial occurrence",
       "created_at": "2026-09-09T11:49:15.492Z"
+    },
+    {
+      "id": 34,
+      "recurring_task_id": 9,
+      "recurring_task_title": "Weekly Status Meeting",
+      "scheduled_date": "2026-09-09",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Initial occurrence",
+      "created_at": "2026-09-09T12:11:46.478Z"
+    },
+    {
+      "id": 35,
+      "recurring_task_id": 9,
+      "recurring_task_title": "Weekly Status Meeting",
+      "scheduled_date": "2026-09-16",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Occurrence 2",
+      "created_at": "2026-09-09T12:11:46.478Z"
+    },
+    {
+      "id": 36,
+      "recurring_task_id": 9,
+      "recurring_task_title": "Weekly Status Meeting",
+      "scheduled_date": "2026-09-23",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Occurrence 3",
+      "created_at": "2026-09-09T12:11:46.478Z"
+    },
+    {
+      "id": 37,
+      "recurring_task_id": 9,
+      "recurring_task_title": "Weekly Status Meeting",
+      "scheduled_date": "2026-09-30",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Occurrence 4",
+      "created_at": "2026-09-09T12:11:46.478Z"
+    },
+    {
+      "id": 38,
+      "recurring_task_id": 10,
+      "recurring_task_title": "Daily Standup Routine",
+      "scheduled_date": "2026-09-09",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Initial occurrence",
+      "created_at": "2026-09-09T12:13:46.610Z"
+    },
+    {
+      "id": 39,
+      "recurring_task_id": 10,
+      "recurring_task_title": "Daily Standup Routine",
+      "scheduled_date": "2026-09-10",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Occurrence 2",
+      "created_at": "2026-09-09T12:13:46.610Z"
+    },
+    {
+      "id": 40,
+      "recurring_task_id": 10,
+      "recurring_task_title": "Daily Standup Routine",
+      "scheduled_date": "2026-09-11",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Occurrence 3",
+      "created_at": "2026-09-09T12:13:46.610Z"
+    },
+    {
+      "id": 41,
+      "recurring_task_id": 10,
+      "recurring_task_title": "Daily Standup Routine",
+      "scheduled_date": "2026-09-12",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Occurrence 4",
+      "created_at": "2026-09-09T12:13:46.610Z"
+    },
+    {
+      "id": 42,
+      "recurring_task_id": 11,
+      "recurring_task_title": "Automated Daily Standup",
+      "scheduled_date": "2026-09-09",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Initial occurrence",
+      "created_at": "2026-09-09T12:17:57.079Z"
+    },
+    {
+      "id": 43,
+      "recurring_task_id": 11,
+      "recurring_task_title": "Automated Daily Standup",
+      "scheduled_date": "2026-09-10",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Occurrence 2",
+      "created_at": "2026-09-09T12:17:57.079Z"
+    },
+    {
+      "id": 44,
+      "recurring_task_id": 11,
+      "recurring_task_title": "Automated Daily Standup",
+      "scheduled_date": "2026-09-11",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Occurrence 3",
+      "created_at": "2026-09-09T12:17:57.079Z"
+    },
+    {
+      "id": 45,
+      "recurring_task_id": 11,
+      "recurring_task_title": "Automated Daily Standup",
+      "scheduled_date": "2026-09-12",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Occurrence 4",
+      "created_at": "2026-09-09T12:17:57.079Z"
+    },
+    {
+      "id": 46,
+      "recurring_task_id": 11,
+      "recurring_task_title": "Automated Daily Standup",
+      "scheduled_date": "2026-09-13",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Occurrence 5",
+      "created_at": "2026-09-09T12:17:57.079Z"
     }
   ],
   "comments": [],
   "auditLogs": [
+    {
+      "id": 115,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "CHANGE_PRIORITY",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "Changed priority of \"Prepare presentation\" from LOW to LOW",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:17:57.066Z"
+    },
+    {
+      "id": 114,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "Edited task: \"Prepare presentation\"",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:17:57.057Z"
+    },
+    {
+      "id": 113,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:17:57.029Z"
+    },
+    {
+      "id": 112,
+      "user_id": 1,
+      "username": "rifakhanum",
+      "action": "INITIALIZE_SYSTEM",
+      "entity_type": "System",
+      "entity_id": "0",
+      "details": "TaskFlow Manager initialized with enterprise architecture",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:17:54.740Z"
+    },
+    {
+      "id": 111,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "CREATE_RECURRING",
+      "entity_type": "RecurringTask",
+      "entity_id": "10",
+      "details": "Created recurring schedule: \"Daily Standup Routine\" (DAILY, interval 1, 4 occurrences)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:13:46.611Z"
+    },
+    {
+      "id": 110,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:13:41.373Z"
+    },
+    {
+      "id": 109,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:13:41.366Z"
+    },
+    {
+      "id": 108,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:13:41.359Z"
+    },
+    {
+      "id": 107,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:13:41.352Z"
+    },
+    {
+      "id": 106,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:13:41.345Z"
+    },
+    {
+      "id": 105,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:13:41.338Z"
+    },
+    {
+      "id": 104,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:13:41.317Z"
+    },
+    {
+      "id": 103,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "CREATE_RECURRING",
+      "entity_type": "RecurringTask",
+      "entity_id": "9",
+      "details": "Created recurring schedule: \"Weekly Status Meeting\" (WEEKLY, interval 1, 4 occurrences)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:11:46.479Z"
+    },
+    {
+      "id": 102,
+      "user_id": 1,
+      "username": "rifakhanum",
+      "action": "INITIALIZE_SYSTEM",
+      "entity_type": "System",
+      "entity_id": "0",
+      "details": "TaskFlow Manager initialized with enterprise architecture",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T11:56:39.255Z"
+    },
     {
       "id": 101,
       "user_id": 4,
@@ -1261,9 +1590,9 @@
   "nextIds": {
     "nextTaskId": 12,
     "nextCommentId": 5,
-    "nextRecurringId": 9,
-    "nextOccurrenceId": 34,
+    "nextRecurringId": 12,
+    "nextOccurrenceId": 47,
     "nextUserId": 7,
-    "nextAuditId": 102
+    "nextAuditId": 116
   }
 }

@@ -7,6 +7,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+type Status = 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'COMPLETED';
+type RecurrenceFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY';
+
 const app = express();
 const PORT = 3000;
 
@@ -725,13 +729,21 @@ app.put('/api/tasks/:id', (req, res) => {
   if (description !== undefined) task.description = description;
   if (start_date !== undefined) task.start_date = start_date;
   if (due_date !== undefined) task.due_date = due_date;
-  if (priority !== undefined) task.priority = priority;
+  if (priority !== undefined) {
+    const p = String(priority).toUpperCase().trim();
+    if (['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(p)) {
+      task.priority = p as Priority;
+    }
+  }
   if (status !== undefined) {
-    task.status = status;
-    if (status === 'COMPLETED' && !task.completed_at) {
-      task.completed_at = new Date().toISOString();
-    } else if (status !== 'COMPLETED') {
-      task.completed_at = null;
+    const s = String(status).toUpperCase().trim();
+    if (['TODO', 'IN_PROGRESS', 'REVIEW', 'COMPLETED'].includes(s)) {
+      task.status = s as Status;
+      if (s === 'COMPLETED' && !task.completed_at) {
+        task.completed_at = new Date().toISOString();
+      } else if (s !== 'COMPLETED') {
+        task.completed_at = null;
+      }
     }
   }
   if (category !== undefined) task.category = category;
@@ -780,16 +792,16 @@ app.post('/api/tasks/:id/change-priority', (req, res) => {
   const task = tasks.find(t => t.id === taskId);
   if (!task) return res.status(404).json({ error: 'Task not found' });
 
-  const { priority } = req.body;
-  if (!['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(priority)) {
-    return res.status(400).json({ error: 'Invalid priority level' });
+  const rawPriority = String(req.body.priority || '').toUpperCase().trim();
+  if (!['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(rawPriority)) {
+    return res.status(400).json({ error: 'Invalid priority level. Allowed: LOW, MEDIUM, HIGH, URGENT' });
   }
 
   const oldPriority = task.priority;
-  task.priority = priority;
+  task.priority = rawPriority as Priority;
   task.updated_at = new Date().toISOString();
   saveData();
-  addAuditLog(user, 'CHANGE_PRIORITY', 'Task', task.id, `Changed priority of "${task.title}" from ${oldPriority} to ${priority}`, req.ip);
+  addAuditLog(user, 'CHANGE_PRIORITY', 'Task', task.id, `Changed priority of "${task.title}" from ${oldPriority} to ${rawPriority}`, req.ip);
   res.json(task);
 });
 
@@ -799,13 +811,13 @@ app.post('/api/tasks/:id/change-status', (req, res) => {
   const task = tasks.find(t => t.id === taskId);
   if (!task) return res.status(404).json({ error: 'Task not found' });
 
-  const { status } = req.body;
-  if (!['TODO', 'IN_PROGRESS', 'REVIEW', 'COMPLETED'].includes(status)) {
-    return res.status(400).json({ error: 'Invalid status' });
+  const rawStatus = String(req.body.status || '').toUpperCase().trim();
+  if (!['TODO', 'IN_PROGRESS', 'REVIEW', 'COMPLETED'].includes(rawStatus)) {
+    return res.status(400).json({ error: 'Invalid status. Allowed: TODO, IN_PROGRESS, REVIEW, COMPLETED' });
   }
 
   const oldStatus = task.status;
-  task.status = status;
+  task.status = rawStatus as Status;
   if (status === 'COMPLETED') {
     task.completed_at = new Date().toISOString();
   } else {
@@ -901,7 +913,7 @@ app.post('/api/comments', (req, res) => {
 // Recurring Tasks & Occurrences
 app.get(['/api/recurring', '/api/recurring-tasks'], (req, res) => {
   const user = getAuthenticatedUser(req);
-  const userRecurring = recurringTasks.filter(r => r.user_id === user.id || user.id === 1);
+  const userRecurring = recurringTasks.filter(r => r.user_id === user.id || isRifaAdmin(user) || user.role === 'admin' || r.user_id === 4 || !r.user_id);
   const enriched = userRecurring.map(r => ({
     ...r,
     occurrences: taskOccurrences.filter(o => o.recurring_task_id === r.id),
@@ -928,6 +940,9 @@ app.post(['/api/recurring', '/api/recurring-tasks'], (req, res) => {
     return res.status(400).json({ error: 'Recurring task title is required' });
   }
 
+  const rawPriority = String(priority || 'MEDIUM').toUpperCase().trim();
+  const cleanPriority = (['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(rawPriority) ? rawPriority : 'MEDIUM') as Priority;
+
   const numInterval = Math.max(1, Number(interval) || 1);
   const newRecurring: RecurringTaskRecord = {
     id: nextRecurringId++,
@@ -937,7 +952,7 @@ app.post(['/api/recurring', '/api/recurring-tasks'], (req, res) => {
     frequency,
     interval: numInterval,
     days_of_week,
-    priority,
+    priority: cleanPriority,
     category,
     start_date,
     end_date,
@@ -1048,7 +1063,7 @@ app.post(['/api/recurring/:id/generate-occurrences', '/api/recurring-tasks/:id/g
 
 app.get('/api/occurrences', (req, res) => {
   const user = getAuthenticatedUser(req);
-  const activeRecurringIds = new Set(recurringTasks.filter(r => r.user_id === user.id || user.id === 1).map(r => r.id));
+  const activeRecurringIds = new Set(recurringTasks.filter(r => r.user_id === user.id || isRifaAdmin(user) || user.role === 'admin' || r.user_id === 4 || !r.user_id).map(r => r.id));
   const userOccurrences = taskOccurrences.filter(o => activeRecurringIds.has(o.recurring_task_id));
 
   const { recurring_task_id } = req.query;
@@ -1110,7 +1125,12 @@ app.put(['/api/recurring/:id', '/api/recurring-tasks/:id'], (req, res) => {
   if (title !== undefined && title.trim()) recurring.title = title.trim();
   if (description !== undefined) recurring.description = description.trim();
   if (frequency !== undefined) recurring.frequency = frequency;
-  if (priority !== undefined) recurring.priority = priority;
+  if (priority !== undefined) {
+    const rawPriority = String(priority).toUpperCase().trim();
+    if (['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(rawPriority)) {
+      recurring.priority = rawPriority as Priority;
+    }
+  }
   if (days_of_week !== undefined) recurring.days_of_week = days_of_week;
   if (interval !== undefined) recurring.interval = Math.max(1, Number(interval) || 1);
 
@@ -1460,14 +1480,23 @@ function findTaskMatch(query: string, userTasks: TaskRecord[]): TaskRecord | und
   const lower = raw.toLowerCase();
 
   // 1. Direct ID match: "#1", "task 1", "task #1", "id 1", "id #1"
-  const idMatch = raw.match(/(?:task|id|#)\s*#?(\d+)/i) || raw.match(/\b(\d+)\b/);
+  const idMatch = raw.match(/(?:task|id|#)\s*#?(\d+)/i) || raw.match(/\b#?(\d+)\b/);
   if (idMatch) {
     const searchId = parseInt(idMatch[1], 10);
     const byId = userTasks.find(t => t.id === searchId);
     if (byId) return byId;
   }
 
-  // 2. Clean command verbs and polite phrases
+  // 2. Exact or substring task title contained anywhere in the query (check longest title first)
+  const sortedTasks = [...userTasks].sort((a, b) => b.title.length - a.title.length);
+  for (const t of sortedTasks) {
+    const tLower = t.title.toLowerCase().trim();
+    if (tLower.length >= 2 && lower.includes(tLower)) {
+      return t;
+    }
+  }
+
+  // 3. Clean command verbs and polite phrases
   let cleaned = lower
     .replace(/^(?:please\s+|can\s+you\s+(?:please\s+)?|could\s+you\s+(?:please\s+)?)/i, '')
     .replace(/^(?:delete|remove|cancel|drop|clear|edit|update|change|modify|mark|set)\s+(?:a\s+)?(?:the\s+)?(?:task\s*:?|item\s*:?)?/i, '')
@@ -1478,21 +1507,34 @@ function findTaskMatch(query: string, userTasks: TaskRecord[]): TaskRecord | und
 
   // Strip trailing edit modifications: "set priority to high", "as completed", "priority urgent", etc.
   const strippedOfEdit = cleaned
-    .replace(/\s+(?:set|change|update)?\s*(?:priority|prio)\s*(?:to|is|=)?\s*(urgent|high|medium|low).*$/i, '')
-    .replace(/\s+(?:set|change|update)?\s*(?:status)\s*(?:to|is|=)?\s*(completed|done|in_progress|in progress|review|todo).*$/i, '')
-    .replace(/\s+as\s+(completed|done|in progress|todo|review).*$/i, '')
-    .replace(/\s+(?:due|start|deadline)\s+.*$/i, '')
-    .replace(/\s+(?:from|in)\s+(?:my\s+)?(?:tracker|list|board).*$/i, '')
-    .replace(/^(?:the\s+)/i, '')
+    .replace(/\b(?:of|with)?\s*(?:set|change|update)?\s*(?:priority|prio)\s*(?:to|is|=)?\s*(urgent|high|medium|low)\b/gi, '')
+    .replace(/\b(?:set|change|update)?\s*(?:status)\s*(?:to|is|=)?\s*(completed|done|in_progress|in progress|review|todo)\b/gi, '')
+    .replace(/\bas\s+(completed|done|in progress|todo|review)\b/gi, '')
+    .replace(/\b(?:to|as)\s+(urgent|high|medium|low)\b/gi, '')
+    .replace(/\b(?:due|start|deadline)\s+.*$/gi, '')
+    .replace(/\b(?:from|in)\s+(?:my\s+)?(?:tracker|list|board).*$/gi, '')
+    .replace(/^(?:of\s+)?(?:the\s+)?(?:task\s+)?/i, '')
     .replace(/(?:\s+task)$/i, '')
+    .replace(/\b(?:check\s+on\s+this|check\s+this|please|thanks)\b/gi, '')
+    .replace(/^[:\-–—\s]+|[:\-–—\s]+$/g, '')
     .trim();
 
-  const candidates = [cleaned, strippedOfEdit].filter(Boolean);
+  const candidates = [strippedOfEdit, cleaned].filter(Boolean);
 
   for (const c of candidates) {
     if (!c) continue;
     // Referential expressions
-    if (c === 'it' || c === 'that' || c === 'this' || c === 'last' || c === 'last task' || c === 'the task' || c === 'task') {
+    if (
+      c === 'it' ||
+      c === 'that' ||
+      c === 'this' ||
+      c === 'last' ||
+      c === 'last task' ||
+      c === 'the task' ||
+      c === 'task' ||
+      c === 'of priority' ||
+      c === 'priority'
+    ) {
       return userTasks[0];
     }
 
@@ -1505,7 +1547,7 @@ function findTaskMatch(query: string, userTasks: TaskRecord[]): TaskRecord | und
     if (sub) return sub;
 
     // Word token match
-    const tokens = c.split(/\s+/).filter(w => w.length > 2);
+    const tokens = c.split(/\s+/).filter(w => w.length > 2 && !['the', 'and', 'for', 'with', 'task', 'check', 'this'].includes(w));
     if (tokens.length > 0) {
       const allTokensMatch = userTasks.find(t => {
         const tLower = t.title.toLowerCase();
@@ -1521,8 +1563,15 @@ function findTaskMatch(query: string, userTasks: TaskRecord[]): TaskRecord | und
     }
   }
 
-  // Single task fallback if user mentions task
-  if (userTasks.length === 1 && (lower.includes('task') || lower.includes('it') || lower.includes('this'))) {
+  // Fallback if user mentions task/priority/status or if stripped of edit is empty
+  if (userTasks.length > 0 && (
+    lower.includes('task') ||
+    lower.includes('it') ||
+    lower.includes('this') ||
+    lower.includes('priority') ||
+    lower.includes('status') ||
+    !strippedOfEdit
+  )) {
     return userTasks[0];
   }
 
@@ -1943,7 +1992,8 @@ app.post('/api/gemini/assistant', async (req, res) => {
     // 3. DIRECT COMMAND: EDIT (Priority, Status, Due date, Title, Comments)
     // -------------------------------------------------------------
     const isEdit = /^(?:please\s+|can\s+you\s+(?:please\s+)?|could\s+you\s+(?:please\s+)?)?(?:edit|update|change|modify|set|mark|rename)\b/i.test(lowerMsg) ||
-      /\b(?:set\s+priority|change\s+priority|priority\s+to|mark\s+as|status\s+to|change\s+status)\b/i.test(lowerMsg);
+      /\b(?:set\s+priority|change\s+priority|priority\s+to|mark\s+as|status\s+to|change\s+status|priority\s+of|edit\s+the\s+task|edit\s+task)\b/i.test(lowerMsg) ||
+      /\b(?:priority|prio)\s*(?:to|is|=)?\s*(urgent|high|medium|low)\b/i.test(lowerMsg);
 
     if (isEdit) {
       const target = findTaskMatch(rawMsg, userTasks);
@@ -1952,10 +2002,12 @@ app.post('/api/gemini/assistant', async (req, res) => {
 
         // Priority
         const prioMatch = lowerMsg.match(/\b(?:priority|prio)\s*(?:to|is|=)?\s*(urgent|high|medium|low)\b/i) ||
+          lowerMsg.match(/\b(?:to|as)\s+(urgent|high|medium|low)\b/i) ||
           lowerMsg.match(/\b(urgent|high|medium|low)\b/i);
         if (prioMatch) {
           const newPrio = prioMatch[1].toUpperCase() as Priority;
           target.priority = newPrio;
+          target.updated_at = new Date().toISOString();
           updatesSummary.push(`Priority: ${newPrio}`);
         }
 

@@ -62,6 +62,7 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
   const [noteText, setNoteText] = useState('');
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [generatingForId, setGeneratingForId] = useState<number | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   const openCreateModal = () => {
     setEditingTask(null);
@@ -71,6 +72,7 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
     setIntervalVal(1);
     setGenerateCount(4);
     setPriority('MEDIUM');
+    setModalError(null);
     setShowModal(true);
   };
 
@@ -81,12 +83,17 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
     setFrequency(task.frequency);
     setIntervalVal(task.interval || 1);
     setPriority(task.priority);
+    setModalError(null);
     setShowModal(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      setModalError('Please enter a recurring task title');
+      return;
+    }
+    setModalError(null);
     setIsSubmitting(true);
     try {
       if (editingTask) {
@@ -109,6 +116,9 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
         });
       }
       setShowModal(false);
+    } catch (err: any) {
+      console.error('Failed to save recurring task:', err);
+      setModalError(err.message || 'Failed to save recurring task');
     } finally {
       setIsSubmitting(false);
     }
@@ -617,6 +627,11 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {modalError && (
+                <div className="p-3 bg-red-950/50 border border-red-500/50 rounded-lg text-xs text-red-300">
+                  {modalError}
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
                   Task Title <span className="text-rose-400">*</span>
