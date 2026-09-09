@@ -277,8 +277,9 @@ export default function App() {
 
   const handleAskAssistant = async (message: string): Promise<string> => {
     const res = await api.askAiAssistant(message);
-    if (res.action === 'CREATE' || res.action === 'EDIT' || res.action === 'DELETE' || res.action === 'CREATE_RECURRING' || res.action === 'DELETE_RECURRING') {
+    if (res.action && res.action !== 'INFO') {
       await refreshAllData();
+      showToast(res.reply, 'success');
     }
     return res.reply;
   };
