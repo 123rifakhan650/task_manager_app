@@ -218,6 +218,31 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         return qs
 
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        if 'priority' in data and data['priority'] is not None:
+            raw_p = str(data['priority']).strip().upper()
+            if raw_p in ['LOW', 'MEDIUM', 'HIGH', 'URGENT']:
+                data['priority'] = raw_p
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', True)
+        instance = self.get_object()
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        if 'priority' in data and data['priority'] is not None:
+            raw_p = str(data['priority']).strip().upper()
+            if raw_p in ['LOW', 'MEDIUM', 'HIGH', 'URGENT']:
+                data['priority'] = raw_p
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
     def perform_create(self, serializer):
         user = self.request.user if getattr(self.request, 'user', None) and self.request.user.is_authenticated else User.objects.first()
         task = serializer.save(user=user)
@@ -253,13 +278,19 @@ class TaskViewSet(viewsets.ModelViewSet):
         create_audit_entry(request.user, 'REOPEN_TASK', 'Task', task.id, f"Reopened task: {task.title}", request.META.get('REMOTE_ADDR'))
         return Response(TaskSerializer(task).data)
 
-    @action(detail=True, methods=['post'], url_path='change-priority')
+    @action(detail=True, methods=['post', 'put', 'patch'], url_path='change-priority')
     def change_priority(self, request, pk=None):
         task = self.get_object()
-        new_priority = request.data.get('priority', task.priority)
-        task.priority = new_priority
-        task.save()
-        create_audit_entry(request.user, 'CHANGE_PRIORITY', 'Task', task.id, f"Changed priority of '{task.title}' to {new_priority}", request.META.get('REMOTE_ADDR'))
+        raw_priority = request.data.get('priority', task.priority)
+        clean_priority = task.priority
+        if raw_priority is not None:
+            p_upper = str(raw_priority).strip().upper()
+            if p_upper in ['LOW', 'MEDIUM', 'HIGH', 'URGENT']:
+                clean_priority = p_upper
+        task.priority = clean_priority
+        task.save(update_fields=['priority', 'updated_at'])
+        user = request.user if getattr(request, 'user', None) and request.user.is_authenticated else None
+        create_audit_entry(user, 'CHANGE_PRIORITY', 'Task', task.id, f"Changed priority of '{task.title}' to {clean_priority}", request.META.get('REMOTE_ADDR'))
         return Response(TaskSerializer(task).data)
 
     @action(detail=True, methods=['post'], url_path='change-status')
@@ -303,6 +334,66 @@ class RecurringTaskViewSet(viewsets.ModelViewSet):
         if user and not user.is_superuser:
             qs = qs.filter(user=user)
         return qs
+
+    def create(self, request, *args, **kwargs):
+        user = self.request.user if getattr(self.request, 'user', None) and self.request.user.is_authenticated else User.objects.first()
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+
+        # Ensure start_date default if omitted
+        if not data.get('start_date'):
+            data['start_date'] = timezone.now().date().isoformat()
+
+        # Normalize priority (e.g., 'Low' -> 'LOW')
+        if 'priority' in data and data['priority']:
+            p_clean = str(data['priority']).strip().upper()
+            if p_clean in ['LOW', 'MEDIUM', 'HIGH', 'URGENT']:
+                data['priority'] = p_clean
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        recurring = serializer.save(user=user)
+
+        # Generate requested occurrences (count from request, default 4)
+        count_param = request.data.get('generate_count') or request.data.get('count') or 4
+        try:
+            generate_count = max(1, min(60, int(count_param)))
+        except (ValueError, TypeError):
+            generate_count = 4
+
+        occurrences = recurring.generate_occurrences(count=generate_count)
+
+        # Also create an active Task in tasks for this recurring schedule so it appears in Dashboard and Tasks
+        first_occ_date = occurrences[0].scheduled_date if occurrences else recurring.start_date
+        initial_task = Task.objects.create(
+            user=user,
+            title=recurring.title,
+            description=recurring.description or f"Recurring schedule ({recurring.frequency})",
+            start_date=recurring.start_date,
+            due_date=first_occ_date,
+            priority=recurring.priority,
+            status='TODO',
+            category=recurring.category or 'Routine',
+            estimated_hours=1.0,
+            actual_hours=0.0,
+            tags=['recurring', recurring.frequency.lower()],
+            is_ai_generated=False,
+            subtasks=[],
+            recurring_task=recurring
+        )
+
+        create_audit_entry(
+            user,
+            'CREATE_RECURRING',
+            'RecurringTask',
+            recurring.id,
+            f"Created recurring task: {recurring.title} ({recurring.frequency}, {len(occurrences)} occurrences)",
+            request.META.get('REMOTE_ADDR')
+        )
+
+        res_data = RecurringTaskSerializer(recurring).data
+        res_data['occurrences'] = TaskOccurrenceSerializer(occurrences, many=True).data
+        res_data['task'] = TaskSerializer(initial_task).data
+        return Response(res_data, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
         user = self.request.user if getattr(self.request, 'user', None) and self.request.user.is_authenticated else User.objects.first()

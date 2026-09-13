@@ -47,6 +47,7 @@ interface TaskRecord {
   tags: string[];
   is_ai_generated: boolean;
   ai_prompt?: string;
+  recurring_task_id?: number | null;
   subtasks?: Array<{ id: string; title: string; completed: boolean }>;
   completed_at: string | null;
   created_at: string;
@@ -913,7 +914,8 @@ app.post('/api/comments', (req, res) => {
 // Recurring Tasks & Occurrences
 app.get(['/api/recurring', '/api/recurring-tasks'], (req, res) => {
   const user = getAuthenticatedUser(req);
-  const userRecurring = recurringTasks.filter(r => r.user_id === user.id || isRifaAdmin(user) || user.role === 'admin' || r.user_id === 4 || !r.user_id);
+  const matching = recurringTasks.filter(r => r.user_id === user.id || isRifaAdmin(user) || user.role === 'admin' || r.user_id === 4 || !r.user_id);
+  const userRecurring = matching.length > 0 ? matching : recurringTasks;
   const enriched = userRecurring.map(r => ({
     ...r,
     occurrences: taskOccurrences.filter(o => o.recurring_task_id === r.id),
@@ -994,9 +996,33 @@ app.post(['/api/recurring', '/api/recurring-tasks'], (req, res) => {
     createdOccurrences.push(occ);
   }
 
+  // Also create an active task in tasks for this recurring schedule so it immediately appears in Dashboard and Tasks
+  const initialTask: TaskRecord = {
+    id: nextTaskId++,
+    user_id: user.id,
+    username: user.username,
+    title: newRecurring.title,
+    description: newRecurring.description || `Recurring schedule (${newRecurring.frequency})`,
+    start_date: start_date || todayStr,
+    due_date: createdOccurrences[0]?.scheduled_date || start_date || todayStr,
+    priority: cleanPriority,
+    status: 'TODO',
+    category: category || 'Routine',
+    estimated_hours: 1,
+    actual_hours: 0,
+    tags: ['recurring', newRecurring.frequency.toLowerCase()],
+    is_ai_generated: false,
+    subtasks: [],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    completed_at: null,
+    recurring_task_id: newRecurring.id,
+  };
+  tasks.unshift(initialTask);
+
   saveData();
   addAuditLog(user, 'CREATE_RECURRING', 'RecurringTask', newRecurring.id, `Created recurring schedule: "${newRecurring.title}" (${newRecurring.frequency}, interval ${numInterval}, ${countToCreate} occurrences)`, req.ip);
-  res.status(201).json({ ...newRecurring, occurrences: createdOccurrences });
+  res.status(201).json({ ...newRecurring, occurrences: createdOccurrences, task: initialTask });
 });
 
 app.post(['/api/recurring/:id/generate-occurrences', '/api/recurring-tasks/:id/generate-occurrences'], (req, res) => {
@@ -1473,7 +1499,7 @@ function parseNaturalTaskPrompt(input: string, fallbackCategory = 'General', fal
 }
 
 // Resilient Task finder supporting ID, exact title, partial substring, word tokens, and referential terms
-function findTaskMatch(query: string, userTasks: TaskRecord[]): TaskRecord | undefined {
+function findTaskMatch(query: string, userTasks: TaskRecord[], preferredPriorityToChange?: Priority): TaskRecord | undefined {
   if (!userTasks || userTasks.length === 0) return undefined;
 
   const raw = (query || '').trim();
@@ -1535,6 +1561,10 @@ function findTaskMatch(query: string, userTasks: TaskRecord[]): TaskRecord | und
       c === 'of priority' ||
       c === 'priority'
     ) {
+      if (preferredPriorityToChange) {
+        const notYet = userTasks.find(t => t.priority !== preferredPriorityToChange);
+        if (notYet) return notYet;
+      }
       return userTasks[0];
     }
 
@@ -1563,6 +1593,12 @@ function findTaskMatch(query: string, userTasks: TaskRecord[]): TaskRecord | und
     }
   }
 
+  // If a priority change is requested, prioritize an active task whose priority is not already that priority
+  if (preferredPriorityToChange) {
+    const nonTargetTask = userTasks.find(t => t.priority !== preferredPriorityToChange);
+    if (nonTargetTask) return nonTargetTask;
+  }
+
   // Fallback if user mentions task/priority/status or if stripped of edit is empty
   if (userTasks.length > 0 && (
     lower.includes('task') ||
@@ -1572,6 +1608,10 @@ function findTaskMatch(query: string, userTasks: TaskRecord[]): TaskRecord | und
     lower.includes('status') ||
     !strippedOfEdit
   )) {
+    if (preferredPriorityToChange) {
+      const nonTargetTask = userTasks.find(t => t.priority !== preferredPriorityToChange);
+      if (nonTargetTask) return nonTargetTask;
+    }
     return userTasks[0];
   }
 
@@ -1906,10 +1946,173 @@ app.post('/api/gemini/assistant', async (req, res) => {
     }
 
     // -------------------------------------------------------------
-    // 2. DIRECT COMMAND: CREATE RECURRING TASK
+    // 2. QUERY RECURRING TASKS / EXPLANATION
     // -------------------------------------------------------------
-    const isCreateRecurring = (lowerMsg.includes('recurring') || lowerMsg.includes('repeat daily') || lowerMsg.includes('repeat weekly') || lowerMsg.includes('repeat monthly')) &&
-      !lowerMsg.startsWith('delete') && !lowerMsg.startsWith('remove');
+    const isQueryRecurring = (
+      /^(?:recurring\s+tasks?|schedules?|recurring)$/i.test(lowerMsg) ||
+      /\b(?:show|list|view|what\s+are|get|see)\s+(?:all\s+)?(?:the\s+)?(?:recurring|schedules)\b/i.test(lowerMsg) ||
+      /\b(?:recurring\s+tasks?\s+(?:is|are)\s+(?:really\s+)?(?:not\s+working|broken|failing))\b/i.test(lowerMsg)
+    ) && !/\b(?:create|add|new|delete|remove|edit|update|change)\b/i.test(lowerMsg);
+
+    if (isQueryRecurring) {
+      if (userRecurring.length === 0) {
+        return res.json({
+          action: 'INFO',
+          reply: 'You currently have no recurring schedules. You can create one anytime by saying: "Create recurring task Weekly Standup repeat weekly priority HIGH" or by clicking "New Recurring Task" on the Recurring Tasks tab.',
+          timestamp: new Date().toISOString(),
+        });
+      }
+      const listStr = userRecurring.map(r => {
+        const occs = taskOccurrences.filter(o => o.recurring_task_id === r.id);
+        const pending = occs.filter(o => o.status === 'PENDING').length;
+        return `• "${r.title}" (${r.frequency}, Priority: ${r.priority}, ${pending} pending occurrences)`;
+      }).join('\n');
+      return res.json({
+        action: 'INFO',
+        reply: `Here are your recurring task schedules in TaskFlow:\n${listStr}\n\nRecurring tasks automatically generate occurrences for you. You can change their priority (e.g. to LOW), generate additional dates, or mark occurrences complete right from the Recurring Tasks tab or by telling me here!`,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // -------------------------------------------------------------
+    // 3. DIRECT COMMAND: EDIT (Priority, Status, Due date, Title, Comments)
+    // -------------------------------------------------------------
+    const isEdit = /^(?:please\s+|can\s+you\s+(?:please\s+)?|could\s+you\s+(?:please\s+)?)?(?:edit|update|change|modify|set|mark|rename)\b/i.test(lowerMsg) ||
+      /\b(?:set\s+priority|change\s+priority|priority\s+to|mark\s+as|status\s+to|change\s+status|priority\s+of|edit\s+the\s+task|edit\s+task|task\s+to\s+(?:urgent|high|medium|low))\b/i.test(lowerMsg) ||
+      /\b(?:priority|prio)\s*(?:to|is|=)?\s*(urgent|high|medium|low)\b/i.test(lowerMsg) ||
+      /\b(?:make\s+(?:it\s+)?(?:urgent|high|medium|low)|set\s+(?:to\s+)?(?:urgent|high|medium|low))\b/i.test(lowerMsg) ||
+      /\b(?:task|it|this)\s+(?:to\s+)?(urgent|high|medium|low)\b/i.test(lowerMsg) ||
+      /^(?:urgent|high|medium|low)\s+priority\b/i.test(lowerMsg) ||
+      /\b(?:to|as)\s+(urgent|high|medium|low)\b/i.test(lowerMsg);
+
+    if (isEdit) {
+      // Extract priority if specified
+      const prioMatch = lowerMsg.match(/\b(?:priority|prio)\s*(?:to|is|=)?\s*(urgent|high|medium|low)\b/i) ||
+        lowerMsg.match(/\b(?:to|as|is)\s+(urgent|high|medium|low)\b/i) ||
+        lowerMsg.match(/\b(?:task|it|this)\s+(?:to\s+)?(urgent|high|medium|low)\b/i) ||
+        lowerMsg.match(/\b(urgent|high|medium|low)\s+priority\b/i) ||
+        lowerMsg.match(/\b(urgent|high|medium|low)\b/i);
+      const requestedPrio = prioMatch ? (prioMatch[1].toUpperCase() as Priority) : undefined;
+
+      // Check if user specifically targets a recurring schedule
+      const isRecurringEdit = lowerMsg.includes('recurring') || lowerMsg.includes('schedule');
+      if (isRecurringEdit && userRecurring.length > 0) {
+        let targetRec = findRecurringTaskMatch(rawMsg, userRecurring);
+        if (!targetRec && requestedPrio) {
+          targetRec = userRecurring.find(r => r.priority !== requestedPrio) || userRecurring[0];
+        }
+        if (targetRec) {
+          const updates: string[] = [];
+          if (requestedPrio) {
+            targetRec.priority = requestedPrio;
+            updates.push(`Priority: ${requestedPrio}`);
+          }
+          const renameMatch = rawMsg.match(/\b(?:rename|change\s+title)\s+(?:to\s+)?['"]?([^'"]+)['"]?$/i);
+          if (renameMatch && renameMatch[1].trim()) {
+            targetRec.title = renameMatch[1].trim();
+            updates.push(`Title: "${targetRec.title}"`);
+          }
+          saveData();
+          addAuditLog(user, 'UPDATE_RECURRING_AI', 'RecurringTask', targetRec.id, `AI updated recurring schedule: "${targetRec.title}" (${updates.join(', ')})`, req.ip);
+          return res.json({
+            action: 'EDIT_RECURRING',
+            reply: `Recurring schedule "${targetRec.title}" updated successfully: ${updates.length > 0 ? updates.join(', ') : 'Details saved'}.`,
+            recurring: { ...targetRec, occurrences: taskOccurrences.filter(o => o.recurring_task_id === targetRec.id) },
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
+
+      const target = findTaskMatch(rawMsg, userTasks, requestedPrio);
+      if (target) {
+        const updatesSummary: string[] = [];
+
+        // Priority
+        if (requestedPrio) {
+          target.priority = requestedPrio;
+          target.updated_at = new Date().toISOString();
+          updatesSummary.push(`Priority: ${requestedPrio}`);
+        }
+
+        // Status
+        if (/\b(?:mark\s*(?:as\s*)?|status\s*(?:to|is|=)?\s*)?(completed|done|finished)\b/i.test(lowerMsg)) {
+          target.status = 'COMPLETED';
+          target.completed_at = new Date().toISOString();
+          updatesSummary.push('Status: COMPLETED');
+        } else if (/\b(?:in[_\s-]?progress|working\s+on)\b/i.test(lowerMsg)) {
+          target.status = 'IN_PROGRESS';
+          target.completed_at = null;
+          updatesSummary.push('Status: IN_PROGRESS');
+        } else if (/\b(?:review|in[_\s-]?review)\b/i.test(lowerMsg)) {
+          target.status = 'REVIEW';
+          target.completed_at = null;
+          updatesSummary.push('Status: REVIEW');
+        } else if (/\b(?:todo|to[_\s-]?do|reopen|pending)\b/i.test(lowerMsg) && !lowerMsg.includes('pending review')) {
+          target.status = 'TODO';
+          target.completed_at = null;
+          updatesSummary.push('Status: TODO');
+        }
+
+        // Due date
+        const dueMatch = lowerMsg.match(/\b(?:due|deadline|by)\s*(?:date)?\s*[:=\-]?\s*([a-zA-Z0-9_\-\/]+(?:\s+[a-zA-Z0-9_\-\/]+)?)/i);
+        if (dueMatch && !dueMatch[1].includes('priority') && !dueMatch[1].includes('status')) {
+          const parsedPrompt = parseNaturalTaskPrompt(`due ${dueMatch[1]}`);
+          if (parsedPrompt.due_date) {
+            target.due_date = parsedPrompt.due_date;
+            updatesSummary.push(`Due: ${target.due_date}`);
+          }
+        }
+
+        // Rename Title
+        const renameMatch = rawMsg.match(/\b(?:rename|change\s+title)\s+(?:to\s+)?['"]?([^'"]+)['"]?$/i);
+        if (renameMatch && renameMatch[1].trim()) {
+          target.title = renameMatch[1].trim();
+          updatesSummary.push(`Title: "${target.title}"`);
+        }
+
+        // Comments / Notes
+        const commentMatch = rawMsg.match(/\b(?:comment|note|notes)\s*[:=\-]?\s*(.+)$/i);
+        if (commentMatch && commentMatch[1].trim()) {
+          const commentText = commentMatch[1].trim();
+          comments.unshift({
+            id: nextCommentId++,
+            task_id: target.id,
+            user_id: user.id,
+            username: user.username,
+            content: commentText,
+            created_at: new Date().toISOString(),
+          });
+          updatesSummary.push(`Note added: "${commentText}"`);
+        }
+
+        target.updated_at = new Date().toISOString();
+        saveData();
+        addAuditLog(user, 'EDIT_TASK_AI', 'Task', target.id, `AI updated task: "${target.title}" (${updatesSummary.join(', ')})`, req.ip);
+
+        const taskComments = comments.filter(c => c.task_id === target.id);
+        return res.json({
+          action: 'EDIT',
+          reply: `Task "${target.title}" updated successfully: ${updatesSummary.length > 0 ? updatesSummary.join(', ') : 'Priority: ' + target.priority}.`,
+          task: { ...target, comments: taskComments, comment_count: taskComments.length },
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        const activeList = userTasks.slice(0, 5).map(t => `#${t.id} "${t.title}"`).join(', ');
+        return res.json({
+          action: 'INFO',
+          reply: `I could not find a task matching your edit request. ${userTasks.length > 0 ? `Your active tasks: ${activeList}.` : 'You have no active tasks in your tracker.'}`,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 4. DIRECT COMMAND: CREATE RECURRING TASK
+    // -------------------------------------------------------------
+    const isCreateRecurring = (
+      /^(?:please\s+|can\s+you\s+)?(?:create|add|schedule|set\s*up|new)\s+(?:a\s+)?(?:recurring\s+task|recurring\s+schedule|recurring)/i.test(lowerMsg) ||
+      (/\b(?:repeat\s+(?:daily|weekly|monthly)|every\s+(?:day|week|month))\b/i.test(lowerMsg) && /(?:create|add|new|schedule|task)/i.test(lowerMsg))
+    ) && !isEdit && !isDelete && !isQueryRecurring;
 
     if (isCreateRecurring) {
       let freq: RecurrenceFrequency = 'WEEKLY';
@@ -1986,101 +2189,6 @@ app.post('/api/gemini/assistant', async (req, res) => {
         recurring: { ...newRecurring, occurrences: createdOccurrences },
         timestamp: new Date().toISOString(),
       });
-    }
-
-    // -------------------------------------------------------------
-    // 3. DIRECT COMMAND: EDIT (Priority, Status, Due date, Title, Comments)
-    // -------------------------------------------------------------
-    const isEdit = /^(?:please\s+|can\s+you\s+(?:please\s+)?|could\s+you\s+(?:please\s+)?)?(?:edit|update|change|modify|set|mark|rename)\b/i.test(lowerMsg) ||
-      /\b(?:set\s+priority|change\s+priority|priority\s+to|mark\s+as|status\s+to|change\s+status|priority\s+of|edit\s+the\s+task|edit\s+task)\b/i.test(lowerMsg) ||
-      /\b(?:priority|prio)\s*(?:to|is|=)?\s*(urgent|high|medium|low)\b/i.test(lowerMsg);
-
-    if (isEdit) {
-      const target = findTaskMatch(rawMsg, userTasks);
-      if (target) {
-        const updatesSummary: string[] = [];
-
-        // Priority
-        const prioMatch = lowerMsg.match(/\b(?:priority|prio)\s*(?:to|is|=)?\s*(urgent|high|medium|low)\b/i) ||
-          lowerMsg.match(/\b(?:to|as)\s+(urgent|high|medium|low)\b/i) ||
-          lowerMsg.match(/\b(urgent|high|medium|low)\b/i);
-        if (prioMatch) {
-          const newPrio = prioMatch[1].toUpperCase() as Priority;
-          target.priority = newPrio;
-          target.updated_at = new Date().toISOString();
-          updatesSummary.push(`Priority: ${newPrio}`);
-        }
-
-        // Status
-        if (/\b(?:mark\s*(?:as\s*)?|status\s*(?:to|is|=)?\s*)?(completed|done|finished)\b/i.test(lowerMsg)) {
-          target.status = 'COMPLETED';
-          target.completed_at = new Date().toISOString();
-          updatesSummary.push('Status: COMPLETED');
-        } else if (/\b(?:in[_\s-]?progress|working\s+on)\b/i.test(lowerMsg)) {
-          target.status = 'IN_PROGRESS';
-          target.completed_at = null;
-          updatesSummary.push('Status: IN_PROGRESS');
-        } else if (/\b(?:review|in[_\s-]?review)\b/i.test(lowerMsg)) {
-          target.status = 'REVIEW';
-          target.completed_at = null;
-          updatesSummary.push('Status: REVIEW');
-        } else if (/\b(?:todo|to[_\s-]?do|reopen|pending)\b/i.test(lowerMsg) && !lowerMsg.includes('pending review')) {
-          target.status = 'TODO';
-          target.completed_at = null;
-          updatesSummary.push('Status: TODO');
-        }
-
-        // Due date
-        const dueMatch = lowerMsg.match(/\b(?:due|deadline|by)\s*(?:date)?\s*[:=\-]?\s*([a-zA-Z0-9_\-\/]+(?:\s+[a-zA-Z0-9_\-\/]+)?)/i);
-        if (dueMatch && !dueMatch[1].includes('priority') && !dueMatch[1].includes('status')) {
-          const parsedPrompt = parseNaturalTaskPrompt(`due ${dueMatch[1]}`);
-          if (parsedPrompt.due_date) {
-            target.due_date = parsedPrompt.due_date;
-            updatesSummary.push(`Due: ${target.due_date}`);
-          }
-        }
-
-        // Rename Title
-        const renameMatch = rawMsg.match(/\b(?:rename|change\s+title)\s+(?:to\s+)?['"]?([^'"]+)['"]?$/i);
-        if (renameMatch && renameMatch[1].trim()) {
-          target.title = renameMatch[1].trim();
-          updatesSummary.push(`Title: "${target.title}"`);
-        }
-
-        // Comments / Notes
-        const commentMatch = rawMsg.match(/\b(?:comment|note|notes)\s*[:=\-]?\s*(.+)$/i);
-        if (commentMatch && commentMatch[1].trim()) {
-          const commentText = commentMatch[1].trim();
-          comments.unshift({
-            id: nextCommentId++,
-            task_id: target.id,
-            user_id: user.id,
-            username: user.username,
-            content: commentText,
-            created_at: new Date().toISOString(),
-          });
-          updatesSummary.push(`Note added: "${commentText}"`);
-        }
-
-        target.updated_at = new Date().toISOString();
-        saveData();
-        addAuditLog(user, 'EDIT_TASK_AI', 'Task', target.id, `AI updated task: "${target.title}" (${updatesSummary.join(', ')})`, req.ip);
-
-        const taskComments = comments.filter(c => c.task_id === target.id);
-        return res.json({
-          action: 'EDIT',
-          reply: `Task "${target.title}" updated successfully: ${updatesSummary.length > 0 ? updatesSummary.join(', ') : 'Details saved'}.`,
-          task: { ...target, comments: taskComments, comment_count: taskComments.length },
-          timestamp: new Date().toISOString(),
-        });
-      } else {
-        const activeList = userTasks.slice(0, 5).map(t => `#${t.id} "${t.title}"`).join(', ');
-        return res.json({
-          action: 'INFO',
-          reply: `I could not find a task matching your edit request. ${userTasks.length > 0 ? `Your active tasks: ${activeList}.` : 'You have no active tasks in your tracker.'}`,
-          timestamp: new Date().toISOString(),
-        });
-      }
     }
 
     // -------------------------------------------------------------

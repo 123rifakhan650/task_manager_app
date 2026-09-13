@@ -43,6 +43,7 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
   const [frequency, setFrequency] = useState<RecurrenceFrequency>('WEEKLY');
   const [interval, setIntervalVal] = useState<number>(1);
   const [generateCount, setGenerateCount] = useState<number>(4);
+  const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [priority, setPriority] = useState<Priority>('MEDIUM');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -71,6 +72,7 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
     setFrequency('WEEKLY');
     setIntervalVal(1);
     setGenerateCount(4);
+    setStartDate(new Date().toISOString().split('T')[0]);
     setPriority('MEDIUM');
     setModalError(null);
     setShowModal(true);
@@ -82,6 +84,7 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
     setDescription(task.description || '');
     setFrequency(task.frequency);
     setIntervalVal(task.interval || 1);
+    setStartDate(task.start_date || new Date().toISOString().split('T')[0]);
     setPriority(task.priority);
     setModalError(null);
     setShowModal(true);
@@ -103,6 +106,7 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
           frequency,
           interval: Math.max(1, Number(interval) || 1),
           priority,
+          start_date: startDate || new Date().toISOString().split('T')[0],
         });
       } else {
         await onCreateRecurring({
@@ -112,6 +116,7 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
           interval: Math.max(1, Number(interval) || 1),
           days_of_week: 'Mon,Wed,Fri',
           priority,
+          start_date: startDate || new Date().toISOString().split('T')[0],
           generate_count: Math.max(1, Number(generateCount) || 1),
         });
       }
@@ -706,25 +711,35 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
                   </select>
                 </div>
 
-                {!editingTask && (
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      Occurrences to Generate
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={1}
-                        max={30}
-                        value={generateCount}
-                        onChange={(e) => setGenerateCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                        className="w-20 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
-                      />
-                      <span className="text-xs text-slate-400">scheduled dates</span>
-                    </div>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
               </div>
+
+              {!editingTask && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Occurrences to Generate
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={30}
+                      value={generateCount}
+                      onChange={(e) => setGenerateCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      className="w-20 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                    />
+                    <span className="text-xs text-slate-400">scheduled dates starting from {startDate || 'today'}</span>
+                  </div>
+                </div>
+              )}
 
               {!editingTask && (() => {
                 const modalProjectedDate = new Date();

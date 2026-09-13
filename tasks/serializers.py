@@ -45,6 +45,13 @@ class TaskSerializer(serializers.ModelSerializer):
     comments = CommentSerializer(many=True, read_only=True)
     comment_count = serializers.SerializerMethodField()
     comments_text = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    priority = serializers.CharField(required=False, default='MEDIUM')
+    recurring_task_id = serializers.PrimaryKeyRelatedField(
+        source='recurring_task',
+        queryset=RecurringTask.objects.all(),
+        required=False,
+        allow_null=True
+    )
 
     class Meta:
         model = Task
@@ -53,9 +60,27 @@ class TaskSerializer(serializers.ModelSerializer):
             'status', 'category', 'start_date', 'due_date', 'estimated_hours',
             'actual_hours', 'tags', 'subtasks', 'is_ai_generated',
             'completed_at', 'created_at', 'updated_at', 'comments', 'comment_count',
-            'comments_text'
+            'comments_text', 'recurring_task', 'recurring_task_id'
         ]
-        read_only_fields = ['id', 'user', 'created_at', 'updated_at', 'completed_at']
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at', 'completed_at', 'recurring_task']
+
+    def to_internal_value(self, data):
+        data = data.copy() if hasattr(data, 'copy') else dict(data)
+        if 'priority' in data and data['priority'] is not None:
+            raw_p = str(data['priority']).strip().upper()
+            if raw_p in ['LOW', 'MEDIUM', 'HIGH', 'URGENT']:
+                data['priority'] = raw_p
+            elif raw_p.capitalize() in ['Low', 'Medium', 'High', 'Urgent']:
+                data['priority'] = raw_p.upper()
+        return super().to_internal_value(data)
+
+    def validate_priority(self, value):
+        if not value:
+            return 'MEDIUM'
+        val = str(value).strip().upper()
+        if val in ['LOW', 'MEDIUM', 'HIGH', 'URGENT']:
+            return val
+        raise serializers.ValidationError(f"Invalid priority '{value}'. Must be one of LOW, MEDIUM, HIGH, URGENT.")
 
     def get_comment_count(self, obj):
         return obj.comments.count()
@@ -73,6 +98,8 @@ class TaskOccurrenceSerializer(serializers.ModelSerializer):
 
 class RecurringTaskSerializer(serializers.ModelSerializer):
     occurrences = TaskOccurrenceSerializer(many=True, read_only=True)
+    priority = serializers.CharField(required=False, default='MEDIUM')
+    start_date = serializers.DateField(required=False)
 
     class Meta:
         model = RecurringTask
@@ -82,6 +109,24 @@ class RecurringTaskSerializer(serializers.ModelSerializer):
             'start_date', 'end_date', 'is_active', 'created_at', 'occurrences'
         ]
         read_only_fields = ['id', 'user', 'created_at']
+
+    def to_internal_value(self, data):
+        data = data.copy() if hasattr(data, 'copy') else dict(data)
+        if 'priority' in data and data['priority'] is not None:
+            raw_p = str(data['priority']).strip().upper()
+            if raw_p in ['LOW', 'MEDIUM', 'HIGH', 'URGENT']:
+                data['priority'] = raw_p
+            elif raw_p.capitalize() in ['Low', 'Medium', 'High', 'Urgent']:
+                data['priority'] = raw_p.upper()
+        return super().to_internal_value(data)
+
+    def validate_priority(self, value):
+        if not value:
+            return 'MEDIUM'
+        val = str(value).strip().upper()
+        if val in ['LOW', 'MEDIUM', 'HIGH', 'URGENT']:
+            return val
+        raise serializers.ValidationError(f"Invalid priority '{value}'. Must be one of LOW, MEDIUM, HIGH, URGENT.")
 
 
 class AuditLogSerializer(serializers.ModelSerializer):

@@ -143,16 +143,61 @@ export default function App() {
   // Task Actions
   const handleCreateOrUpdateTask = async (taskData: Partial<Task>) => {
     try {
-      if (editingTask) {
-        const updated = await api.updateTask(editingTask.id, taskData);
-        setTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, ...updated } : t));
-        showToast('Task updated successfully');
+      // Correctly identify target task by ID from editingTask state or payload ID
+      const targetId = editingTask?.id != null
+        ? Number(editingTask.id)
+        : ((taskData as any)?.id != null ? Number((taskData as any).id) : null);
+
+      // Properly handle 'priority' field update when 'Low' (or any priority) is selected
+      let normalizedPriority: Priority | undefined = undefined;
+      if (taskData.priority !== undefined && taskData.priority !== null) {
+        const rawPriority = String(taskData.priority).toUpperCase().trim();
+        if (['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(rawPriority)) {
+          normalizedPriority = rawPriority as Priority;
+        }
+      }
+
+      const sanitizedPayload: Partial<Task> = {
+        ...taskData,
+        ...(normalizedPriority ? { priority: normalizedPriority } : {}),
+      };
+
+      if (targetId && !isNaN(targetId)) {
+        // Ensure complete payload by merging initial task attributes with changes
+        const baseTask = editingTask && Number(editingTask.id) === targetId ? editingTask : {};
+        const updatePayload: Partial<Task> = {
+          ...baseTask,
+          ...sanitizedPayload,
+          id: targetId,
+          ...(normalizedPriority ? { priority: normalizedPriority } : {}),
+        };
+
+        // Execute API update with properly identified ID and priority payload
+        const updated = await api.updateTask(targetId, updatePayload);
+        
+        // Guarantee priority field is explicitly synced if selected
+        if (normalizedPriority) {
+          try {
+            await api.changePriority(targetId, normalizedPriority);
+          } catch {
+            // Handled if PUT already updated priority
+          }
+        }
+
+        const resolvedTask: Task = {
+          ...updated,
+          ...(normalizedPriority ? { priority: normalizedPriority } : {}),
+        };
+
+        setTasks(prev => prev.map(t => t.id === targetId ? { ...t, ...resolvedTask } : t));
+        showToast(`Task updated successfully (Priority: ${resolvedTask.priority})`);
       } else {
-        const created = await api.createTask(taskData);
+        const created = await api.createTask(sanitizedPayload);
         setTasks(prev => [created, ...prev]);
         showToast('Task created successfully');
       }
       setEditingTask(null);
+      setIsTaskModalOpen(false);
       await refreshAllData();
     } catch (err: any) {
       showToast(err.message || 'Failed to save task', 'error');
@@ -223,6 +268,10 @@ export default function App() {
             ...created.occurrences,
             ...prev.filter(o => o.recurring_task_id !== created.id),
           ]);
+        }
+        if ((created as any).task) {
+          const newTask = (created as any).task;
+          setTasks(prev => [newTask, ...prev.filter(t => t.id !== newTask.id)]);
         }
       }
       showToast('Recurring task created successfully');
@@ -429,10 +478,12 @@ export default function App() {
           <DashboardView
             stats={stats}
             tasks={tasks}
+            recurringTasks={recurringTasks}
             currentUser={currentUser}
             onNavigate={setActiveTab}
             onOpenNewTask={() => { setEditingTask(null); setIsTaskModalOpen(true); }}
             onOpenAiTask={() => setActiveTab('gemini')}
+            onEditTask={(task) => { setEditingTask(task); setIsTaskModalOpen(true); }}
           />
         )}
 

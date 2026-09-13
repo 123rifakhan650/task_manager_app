@@ -52,6 +52,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     setIsSubmitting(true);
     try {
       await onSubmit({
+        ...(initialTask ? { id: initialTask.id } : {}),
         title: title.trim(),
         description: description.trim(),
         priority,

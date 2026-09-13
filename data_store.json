@@ -72,7 +72,7 @@
       "subtasks": [],
       "completed_at": null,
       "created_at": "2026-09-09T11:45:35.100Z",
-      "updated_at": "2026-09-09T12:17:57.065Z"
+      "updated_at": "2026-09-09T12:39:11.822Z"
     },
     {
       "id": 6,
@@ -82,7 +82,7 @@
       "start_date": "2026-09-08",
       "due_date": "2026-09-08",
       "description": "Testing create",
-      "priority": "URGENT",
+      "priority": "LOW",
       "status": "TODO",
       "category": "General",
       "estimated_hours": 1,
@@ -92,7 +92,7 @@
       "subtasks": [],
       "completed_at": null,
       "created_at": "2026-09-08T11:16:36.493Z",
-      "updated_at": "2026-09-09T11:46:58.572Z"
+      "updated_at": "2026-09-09T12:39:11.828Z"
     },
     {
       "id": 5,
@@ -102,7 +102,7 @@
       "start_date": "2026-09-06",
       "due_date": "2026-09-09",
       "description": "",
-      "priority": "MEDIUM",
+      "priority": "LOW",
       "status": "COMPLETED",
       "category": "General",
       "estimated_hours": 1,
@@ -112,7 +112,7 @@
       "subtasks": [],
       "completed_at": "2026-09-07T14:13:45.320Z",
       "created_at": "2026-09-07T14:08:30.787Z",
-      "updated_at": "2026-09-07T14:13:45.320Z"
+      "updated_at": "2026-09-09T12:39:11.792Z"
     }
   ],
   "recurringTasks": [
@@ -124,7 +124,7 @@
       "frequency": "WEEKLY",
       "interval": 1,
       "days_of_week": "Mon,Wed,Fri",
-      "priority": "MEDIUM",
+      "priority": "LOW",
       "category": "General",
       "start_date": "2026-09-09",
       "end_date": null,
@@ -175,6 +175,51 @@
       "end_date": null,
       "is_active": true,
       "created_at": "2026-09-09T12:17:57.079Z"
+    },
+    {
+      "id": 12,
+      "user_id": 4,
+      "title": "Recurring tasks",
+      "description": "Recurring task: Recurring tasks (WEEKLY)",
+      "frequency": "WEEKLY",
+      "interval": 1,
+      "days_of_week": "Mon,Wed,Fri",
+      "priority": "MEDIUM",
+      "category": "General",
+      "start_date": "2026-09-09",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2026-09-09T12:34:45.232Z"
+    },
+    {
+      "id": 13,
+      "user_id": 4,
+      "title": "Recurring task",
+      "description": "Recurring task: Recurring task (WEEKLY)",
+      "frequency": "WEEKLY",
+      "interval": 1,
+      "days_of_week": "Mon,Wed,Fri",
+      "priority": "MEDIUM",
+      "category": "General",
+      "start_date": "2026-09-09",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2026-09-09T12:34:45.240Z"
+    },
+    {
+      "id": 14,
+      "user_id": 4,
+      "title": "Weekly standup",
+      "description": "Recurring task: Weekly standup (WEEKLY)",
+      "frequency": "WEEKLY",
+      "interval": 1,
+      "days_of_week": "Mon,Wed,Fri",
+      "priority": "MEDIUM",
+      "category": "General",
+      "start_date": "2026-09-09",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2026-09-09T12:34:45.246Z"
     }
   ],
   "taskOccurrences": [
@@ -317,10 +362,427 @@
       "completed_at": null,
       "notes": "Occurrence 5",
       "created_at": "2026-09-09T12:17:57.079Z"
+    },
+    {
+      "id": 47,
+      "recurring_task_id": 12,
+      "recurring_task_title": "Recurring tasks",
+      "scheduled_date": "2026-09-09",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Initial scheduled occurrence",
+      "created_at": "2026-09-09T12:34:45.232Z"
+    },
+    {
+      "id": 48,
+      "recurring_task_id": 12,
+      "recurring_task_title": "Recurring tasks",
+      "scheduled_date": "2026-09-16",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Scheduled occurrence #2",
+      "created_at": "2026-09-09T12:34:45.232Z"
+    },
+    {
+      "id": 49,
+      "recurring_task_id": 12,
+      "recurring_task_title": "Recurring tasks",
+      "scheduled_date": "2026-09-23",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Scheduled occurrence #3",
+      "created_at": "2026-09-09T12:34:45.232Z"
+    },
+    {
+      "id": 50,
+      "recurring_task_id": 12,
+      "recurring_task_title": "Recurring tasks",
+      "scheduled_date": "2026-09-30",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Scheduled occurrence #4",
+      "created_at": "2026-09-09T12:34:45.232Z"
+    },
+    {
+      "id": 51,
+      "recurring_task_id": 13,
+      "recurring_task_title": "Recurring task",
+      "scheduled_date": "2026-09-09",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Initial scheduled occurrence",
+      "created_at": "2026-09-09T12:34:45.240Z"
+    },
+    {
+      "id": 52,
+      "recurring_task_id": 13,
+      "recurring_task_title": "Recurring task",
+      "scheduled_date": "2026-09-16",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Scheduled occurrence #2",
+      "created_at": "2026-09-09T12:34:45.240Z"
+    },
+    {
+      "id": 53,
+      "recurring_task_id": 13,
+      "recurring_task_title": "Recurring task",
+      "scheduled_date": "2026-09-23",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Scheduled occurrence #3",
+      "created_at": "2026-09-09T12:34:45.240Z"
+    },
+    {
+      "id": 54,
+      "recurring_task_id": 13,
+      "recurring_task_title": "Recurring task",
+      "scheduled_date": "2026-09-30",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Scheduled occurrence #4",
+      "created_at": "2026-09-09T12:34:45.240Z"
+    },
+    {
+      "id": 55,
+      "recurring_task_id": 14,
+      "recurring_task_title": "Weekly standup",
+      "scheduled_date": "2026-09-09",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Initial scheduled occurrence",
+      "created_at": "2026-09-09T12:34:45.246Z"
+    },
+    {
+      "id": 56,
+      "recurring_task_id": 14,
+      "recurring_task_title": "Weekly standup",
+      "scheduled_date": "2026-09-16",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Scheduled occurrence #2",
+      "created_at": "2026-09-09T12:34:45.246Z"
+    },
+    {
+      "id": 57,
+      "recurring_task_id": 14,
+      "recurring_task_title": "Weekly standup",
+      "scheduled_date": "2026-09-23",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Scheduled occurrence #3",
+      "created_at": "2026-09-09T12:34:45.246Z"
+    },
+    {
+      "id": 58,
+      "recurring_task_id": 14,
+      "recurring_task_title": "Weekly standup",
+      "scheduled_date": "2026-09-30",
+      "status": "PENDING",
+      "completed_at": null,
+      "notes": "Scheduled occurrence #4",
+      "created_at": "2026-09-09T12:34:45.246Z"
     }
   ],
   "comments": [],
   "auditLogs": [
+    {
+      "id": 142,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "6",
+      "details": "AI updated task: \"Test Direct Task Creation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:39:11.828Z"
+    },
+    {
+      "id": 141,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:39:11.823Z"
+    },
+    {
+      "id": 140,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:39:11.803Z"
+    },
+    {
+      "id": 139,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "5",
+      "details": "AI updated task: \"CA\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:39:11.792Z"
+    },
+    {
+      "id": 138,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "6",
+      "details": "AI updated task: \"Test Direct Task Creation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:39:11.769Z"
+    },
+    {
+      "id": 137,
+      "user_id": 1,
+      "username": "rifakhanum",
+      "action": "INITIALIZE_SYSTEM",
+      "entity_type": "System",
+      "entity_id": "0",
+      "details": "TaskFlow Manager initialized with enterprise architecture",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:39:08.086Z"
+    },
+    {
+      "id": 136,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:38:51.553Z"
+    },
+    {
+      "id": 135,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "DELETE_RECURRING",
+      "entity_type": "RecurringTask",
+      "entity_id": "15",
+      "details": "Deleted recurring schedule \"Test New Schedule Updated\" and 5 occurrences",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:36:46.851Z"
+    },
+    {
+      "id": 134,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "COMPLETE_OCCURRENCE",
+      "entity_type": "TaskOccurrence",
+      "entity_id": "59",
+      "details": "Completed recurring occurrence for \"Test New Schedule Updated\" scheduled on 2026-09-09",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:36:46.846Z"
+    },
+    {
+      "id": 133,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "GENERATE_OCCURRENCES",
+      "entity_type": "RecurringTask",
+      "entity_id": "15",
+      "details": "Generated 2 new occurrences for \"Test New Schedule Updated\"",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:36:46.838Z"
+    },
+    {
+      "id": 132,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "UPDATE_RECURRING",
+      "entity_type": "RecurringTask",
+      "entity_id": "15",
+      "details": "Updated recurring schedule: \"Test New Schedule Updated\"",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:36:46.833Z"
+    },
+    {
+      "id": 131,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "CREATE_RECURRING",
+      "entity_type": "RecurringTask",
+      "entity_id": "15",
+      "details": "Created recurring schedule: \"Test New Schedule\" (WEEKLY, interval 1, 3 occurrences)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:36:46.825Z"
+    },
+    {
+      "id": 130,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:34:45.252Z"
+    },
+    {
+      "id": 129,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "CREATE_RECURRING_AI",
+      "entity_type": "RecurringTask",
+      "entity_id": "14",
+      "details": "AI created recurring schedule: \"Weekly standup\" (WEEKLY, MEDIUM)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:34:45.246Z"
+    },
+    {
+      "id": 128,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "CREATE_RECURRING_AI",
+      "entity_type": "RecurringTask",
+      "entity_id": "13",
+      "details": "AI created recurring schedule: \"Recurring task\" (WEEKLY, MEDIUM)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:34:45.240Z"
+    },
+    {
+      "id": 127,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "CREATE_RECURRING_AI",
+      "entity_type": "RecurringTask",
+      "entity_id": "12",
+      "details": "AI created recurring schedule: \"Recurring tasks\" (WEEKLY, MEDIUM)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:34:45.233Z"
+    },
+    {
+      "id": 126,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:34:41.356Z"
+    },
+    {
+      "id": 125,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:34:22.537Z"
+    },
+    {
+      "id": 124,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:34:22.529Z"
+    },
+    {
+      "id": 123,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:34:22.522Z"
+    },
+    {
+      "id": 122,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:34:22.514Z"
+    },
+    {
+      "id": 121,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:34:22.492Z"
+    },
+    {
+      "id": 120,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:18:49.865Z"
+    },
+    {
+      "id": 119,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:18:49.802Z"
+    },
+    {
+      "id": 118,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:18:49.648Z"
+    },
+    {
+      "id": 117,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:18:49.585Z"
+    },
+    {
+      "id": 116,
+      "user_id": 1,
+      "username": "rifakhanum",
+      "action": "INITIALIZE_SYSTEM",
+      "entity_type": "System",
+      "entity_id": "0",
+      "details": "TaskFlow Manager initialized with enterprise architecture",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-09T12:18:41.675Z"
+    },
     {
       "id": 115,
       "user_id": 4,
@@ -1590,9 +2052,9 @@
   "nextIds": {
     "nextTaskId": 12,
     "nextCommentId": 5,
-    "nextRecurringId": 12,
-    "nextOccurrenceId": 47,
+    "nextRecurringId": 16,
+    "nextOccurrenceId": 64,
     "nextUserId": 7,
-    "nextAuditId": 116
+    "nextAuditId": 143
   }
 }
