@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   RefreshCw, Plus, Calendar, CheckCircle2,
   Edit2, Trash2, MessageSquare, X, Check, AlertTriangle
@@ -34,6 +34,14 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
   onCompleteOccurrence,
   onUpdateOccurrenceNote,
 }) => {
+  const [localTasks, setLocalTasks] = useState<RecurringTask[]>(recurringTasks);
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
+
+  // Synchronize local state whenever prop updates
+  useEffect(() => {
+    setLocalTasks(recurringTasks);
+  }, [recurringTasks]);
+
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<RecurringTask | null>(null);
 
@@ -131,25 +139,53 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
 
   const handleConfirmDelete = async () => {
     if (!deleteConfirmTask) return;
+    const targetId = deleteConfirmTask.id;
+    const targetTitle = deleteConfirmTask.title;
     setIsDeleting(true);
+
+    // Optimistically update local view immediately
+    setLocalTasks(prev => prev.filter(r => r.id !== targetId));
+
     try {
-      await onDeleteRecurring(deleteConfirmTask.id);
+      await onDeleteRecurring(targetId);
       setDeleteConfirmTask(null);
-    } catch (err) {
+      setSuccessNotice(`Recurring schedule "${targetTitle}" deleted successfully!`);
+      setTimeout(() => setSuccessNotice(null), 5000);
+    } catch (err: any) {
       console.error('Failed to delete recurring task:', err);
+      setLocalTasks(recurringTasks);
+      setDeleteConfirmTask(null);
+      setSuccessNotice(`Failed to delete recurring task: ${err.message || 'Server error'}`);
     } finally {
       setIsDeleting(false);
     }
   };
 
   const handleConfirmDeleteOccurrence = async () => {
-    if (!deleteConfirmOccurrence || !onDeleteOccurrence) return;
+    if (!deleteConfirmOccurrence) return;
+    const targetId = deleteConfirmOccurrence.id;
+    const targetDate = deleteConfirmOccurrence.date;
+    const targetTitle = deleteConfirmOccurrence.title;
     setIsDeletingOccurrence(true);
+
+    // Optimistically remove occurrence from local view immediately
+    setLocalTasks(prev => prev.map(rec => ({
+      ...rec,
+      occurrences: (rec.occurrences || []).filter(o => o.id !== targetId)
+    })));
+
     try {
-      await onDeleteOccurrence(deleteConfirmOccurrence.id);
+      if (onDeleteOccurrence) {
+        await onDeleteOccurrence(targetId);
+      }
       setDeleteConfirmOccurrence(null);
-    } catch (err) {
+      setSuccessNotice(`Occurrence on ${targetDate} for "${targetTitle}" deleted successfully! Remaining schedule is updated below.`);
+      setTimeout(() => setSuccessNotice(null), 5000);
+    } catch (err: any) {
       console.error('Failed to delete occurrence:', err);
+      setLocalTasks(recurringTasks);
+      setDeleteConfirmOccurrence(null);
+      setSuccessNotice(`Failed to delete occurrence: ${err.message || 'Server error'}`);
     } finally {
       setIsDeletingOccurrence(false);
     }
@@ -160,17 +196,37 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
     const count = generateCounts[id] || 4;
     try {
       await onGenerateOccurrences(id, count);
+      setSuccessNotice(`Generated ${count} new scheduled occurrences!`);
+      setTimeout(() => setSuccessNotice(null), 4000);
     } finally {
       setGeneratingForId(null);
     }
   };
 
   const handleSaveNote = async (occurrenceId: number) => {
+    const trimmed = noteText.trim();
     setIsSavingNote(true);
+
+    // Optimistically update note in local view immediately
+    setLocalTasks(prev => prev.map(rec => ({
+      ...rec,
+      occurrences: (rec.occurrences || []).map(occ =>
+        occ.id === occurrenceId ? { ...occ, notes: trimmed } : occ
+      )
+    })));
+
     try {
-      await onUpdateOccurrenceNote(occurrenceId, noteText.trim());
+      if (onUpdateOccurrenceNote) {
+        await onUpdateOccurrenceNote(occurrenceId, trimmed);
+      }
       setEditingNoteOccurrenceId(null);
       setNoteText('');
+      setSuccessNotice('Note saved successfully on scheduled date!');
+      setTimeout(() => setSuccessNotice(null), 4000);
+    } catch (err: any) {
+      console.error('Failed to save note:', err);
+      setLocalTasks(recurringTasks);
+      setModalError(err.message || 'Failed to save note');
     } finally {
       setIsSavingNote(false);
     }
@@ -178,6 +234,24 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Success Notification Banner */}
+      {successNotice && (
+        <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500/70 text-emerald-200 text-xs flex items-center justify-between gap-3 shadow-lg animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2.5 font-medium">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{successNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessNotice(null)}
+            className="text-emerald-400 hover:text-white p-1 rounded transition"
+            title="Dismiss notice"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-xl">
         <div>
@@ -200,7 +274,7 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
       </div>
 
       {/* Recurring Tasks List */}
-      {recurringTasks.length === 0 ? (
+      {localTasks.length === 0 ? (
         <div className="text-center py-16 border border-dashed border-slate-800 rounded-xl bg-slate-900/50 p-6">
           <div className="w-12 h-12 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
             <RefreshCw className="w-6 h-6" />
@@ -218,7 +292,7 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
-          {recurringTasks.map(rec => {
+          {localTasks.map(rec => {
             const occurrences = rec.occurrences || [];
             const sortedOccurrences = [...occurrences].sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
             const firstDate = sortedOccurrences[0]?.scheduled_date;
@@ -449,11 +523,11 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1 min-w-0">
                                     {occ.notes ? (
-                                      <p className="text-[11px] text-amber-300/90 italic bg-amber-950/20 p-1.5 rounded border border-amber-900/30 truncate">
+                                      <p className="text-[11px] text-amber-300/90 italic bg-amber-950/25 p-1.5 rounded border border-amber-900/40 break-words whitespace-pre-wrap">
                                         "{occ.notes}"
                                       </p>
                                     ) : (
-                                      <p className="text-[11px] text-slate-500 italic">No notes added</p>
+                                      <p className="text-[11px] text-slate-500 italic">No note added</p>
                                     )}
                                   </div>
                                   <button
@@ -462,11 +536,11 @@ export const RecurringView: React.FC<RecurringViewProps> = ({
                                       setEditingNoteOccurrenceId(occ.id);
                                       setNoteText(occ.notes || '');
                                     }}
-                                    className="text-slate-400 hover:text-cyan-300 text-[10px] flex items-center gap-1 shrink-0 p-1 rounded bg-slate-800 hover:bg-slate-700"
-                                    title="Add or update comment on this occurrence"
+                                    className="text-cyan-400 hover:text-cyan-300 text-[10px] flex items-center gap-1 shrink-0 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 transition"
+                                    title="Add or update note on this occurrence"
                                   >
                                     <MessageSquare className="w-3 h-3" />
-                                    <span>{occ.notes ? 'Edit' : 'Comment'}</span>
+                                    <span>{occ.notes ? 'Edit Note' : 'Add Note'}</span>
                                   </button>
                                 </div>
                               )}

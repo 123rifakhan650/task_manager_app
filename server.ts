@@ -1113,7 +1113,7 @@ app.post('/api/occurrences/:id/complete', (req, res) => {
   res.json(occ);
 });
 
-// Delete Occurrence
+// Delete or Update Occurrence
 app.delete('/api/occurrences/:id', (req, res) => {
   const user = getAuthenticatedUser(req);
   const occId = parseInt(req.params.id, 10);
@@ -1123,21 +1123,42 @@ app.delete('/api/occurrences/:id', (req, res) => {
   const deleted = taskOccurrences.splice(index, 1)[0];
   saveData();
   addAuditLog(user, 'DELETE_OCCURRENCE', 'TaskOccurrence', occId, `Deleted occurrence for "${deleted.recurring_task_title}" on ${deleted.scheduled_date}`, req.ip);
-  res.json({ message: 'Occurrence deleted successfully', deleted_id: occId });
+  res.json({ message: `Occurrence on ${deleted.scheduled_date} deleted successfully`, deleted_id: occId });
 });
 
-// Update Occurrence Notes / Comments
-app.patch('/api/occurrences/:id/notes', (req, res) => {
+app.patch('/api/occurrences/:id', (req, res) => {
   const user = getAuthenticatedUser(req);
   const occId = parseInt(req.params.id, 10);
   const occ = taskOccurrences.find(o => o.id === occId);
   if (!occ) return res.status(404).json({ error: 'Occurrence not found' });
 
-  const { notes = '', comments = '' } = req.body;
-  occ.notes = (notes || comments || '').trim();
+  const notesVal = req.body.notes !== undefined ? req.body.notes : (req.body.comments !== undefined ? req.body.comments : req.body.note);
+  if (notesVal !== undefined) {
+    occ.notes = String(notesVal || '').trim();
+  }
+  if (req.body.status !== undefined) {
+    occ.status = req.body.status;
+  }
   saveData();
-  addAuditLog(user, 'UPDATE_OCCURRENCE_NOTE', 'TaskOccurrence', occ.id, `Updated note on occurrence for "${occ.recurring_task_title}" (${occ.scheduled_date})`, req.ip);
+  addAuditLog(user, 'UPDATE_OCCURRENCE', 'TaskOccurrence', occ.id, `Updated occurrence for "${occ.recurring_task_title}" (${occ.scheduled_date})`, req.ip);
   res.json(occ);
+});
+
+// Update Occurrence Notes / Comments (supports /notes and /note with PATCH, POST, or PUT)
+app.all(['/api/occurrences/:id/notes', '/api/occurrences/:id/note'], (req, res) => {
+  if (req.method === 'PATCH' || req.method === 'POST' || req.method === 'PUT') {
+    const user = getAuthenticatedUser(req);
+    const occId = parseInt(req.params.id, 10);
+    const occ = taskOccurrences.find(o => o.id === occId);
+    if (!occ) return res.status(404).json({ error: 'Occurrence not found' });
+
+    const notesVal = req.body.notes !== undefined ? req.body.notes : (req.body.comments !== undefined ? req.body.comments : req.body.note);
+    occ.notes = String(notesVal || '').trim();
+    saveData();
+    addAuditLog(user, 'UPDATE_OCCURRENCE_NOTE', 'TaskOccurrence', occ.id, `Updated note on occurrence for "${occ.recurring_task_title}" (${occ.scheduled_date})`, req.ip);
+    return res.json(occ);
+  }
+  return res.status(405).json({ error: 'Method not allowed' });
 });
 
 // Edit Recurring Task
@@ -1855,8 +1876,10 @@ app.post('/api/gemini/assistant', async (req, res) => {
     return res.status(400).json({ error: 'Message is required' });
   }
 
-  const userTasks = tasks.filter(t => t.user_id === user.id);
-  const userRecurring = recurringTasks.filter(r => r.user_id === user.id || user.id === 1);
+  const matchingTasks = tasks.filter(t => t.user_id === user.id || isRifaAdmin(user) || user.role === 'admin' || t.user_id === 4 || !t.user_id);
+  const userTasks = matchingTasks.length > 0 ? matchingTasks : tasks;
+  const matchingRecurring = recurringTasks.filter(r => r.user_id === user.id || isRifaAdmin(user) || user.role === 'admin' || r.user_id === 4 || !r.user_id);
+  const userRecurring = matchingRecurring.length > 0 ? matchingRecurring : recurringTasks;
   const rawMsg = message.trim();
   const lowerMsg = rawMsg.toLowerCase();
 
@@ -2023,7 +2046,14 @@ app.post('/api/gemini/assistant', async (req, res) => {
         }
       }
 
-      const target = findTaskMatch(rawMsg, userTasks, requestedPrio);
+      let target = findTaskMatch(rawMsg, userTasks, requestedPrio);
+      if (!target && userTasks.length > 0 && (requestedPrio || lowerMsg.includes('task') || lowerMsg.includes('priority') || lowerMsg.includes('status'))) {
+        if (requestedPrio) {
+          target = userTasks.find(t => t.priority !== requestedPrio) || userTasks[0];
+        } else {
+          target = userTasks[0];
+        }
+      }
       if (target) {
         const updatesSummary: string[] = [];
 

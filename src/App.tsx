@@ -331,6 +331,12 @@ export default function App() {
   };
 
   const handleUpdateOccurrenceNote = async (occurrenceId: number, note: string) => {
+    // Immediately update local occurrences and recurringTasks occurrences
+    setOccurrences(prev => prev.map(o => o.id === occurrenceId ? { ...o, notes: note } : o));
+    setRecurringTasks(prev => prev.map(r => ({
+      ...r,
+      occurrences: (r.occurrences || []).map(o => o.id === occurrenceId ? { ...o, notes: note } : o),
+    })));
     await api.updateOccurrenceNote(occurrenceId, note);
     showToast('Note updated successfully');
     await refreshAllData();

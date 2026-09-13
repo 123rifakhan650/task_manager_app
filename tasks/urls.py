@@ -5,6 +5,7 @@ from .views import (
     TaskViewSet, RecurringTaskViewSet, AuditLogListView,
     MetricsView, GeminiAiView, GeminiConfirmTaskView, GeminiAssistantView,
     CommentListCreateView, TaskOccurrenceListView, CompleteOccurrenceView,
+    TaskOccurrenceDetailView, TaskOccurrenceNotesView,
     AnalyticsDashboardView, UsersListView, UserPermissionsView,
     SystemTestsView, DeploymentInfoView
 )
@@ -28,6 +29,9 @@ urlpatterns = [
     # Standalone Comments & Occurrences endpoints
     re_path(r'^comments/?$', CommentListCreateView.as_view(), name='comments-list-create'),
     re_path(r'^occurrences/?$', TaskOccurrenceListView.as_view(), name='occurrences-list'),
+    re_path(r'^occurrences/(?P<pk>\d+)/?$', TaskOccurrenceDetailView.as_view(), name='occurrence-detail'),
+    re_path(r'^occurrences/(?P<pk>\d+)/notes/?$', TaskOccurrenceNotesView.as_view(), name='occurrence-notes'),
+    re_path(r'^occurrences/(?P<pk>\d+)/note/?$', TaskOccurrenceNotesView.as_view(), name='occurrence-note'),
     re_path(r'^occurrences/(?P<pk>\d+)/complete/?$', CompleteOccurrenceView.as_view(), name='occurrence-complete'),
 
     # Metrics, Analytics & Audit logs

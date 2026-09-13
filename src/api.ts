@@ -203,7 +203,7 @@ export const api = {
   updateOccurrenceNote: (occurrenceId: number, notes: string) =>
     request<TaskOccurrence>(`/api/occurrences/${occurrenceId}/notes`, {
       method: 'PATCH',
-      body: JSON.stringify({ notes }),
+      body: JSON.stringify({ notes, note: notes, comments: notes }),
     }),
 
   // Metrics

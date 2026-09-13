@@ -72,7 +72,7 @@
       "subtasks": [],
       "completed_at": null,
       "created_at": "2026-09-09T11:45:35.100Z",
-      "updated_at": "2026-09-09T12:39:11.822Z"
+      "updated_at": "2026-09-13T16:57:55.939Z"
     },
     {
       "id": 6,
@@ -199,7 +199,7 @@
       "frequency": "WEEKLY",
       "interval": 1,
       "days_of_week": "Mon,Wed,Fri",
-      "priority": "MEDIUM",
+      "priority": "LOW",
       "category": "General",
       "start_date": "2026-09-09",
       "end_date": null,
@@ -223,16 +223,6 @@
     }
   ],
   "taskOccurrences": [
-    {
-      "id": 21,
-      "recurring_task_id": 5,
-      "recurring_task_title": "Weekly Standup",
-      "scheduled_date": "2026-09-09",
-      "status": "PENDING",
-      "completed_at": null,
-      "notes": "Initial occurrence",
-      "created_at": "2026-09-09T11:49:15.492Z"
-    },
     {
       "id": 34,
       "recurring_task_id": 9,
@@ -472,20 +462,219 @@
       "completed_at": null,
       "notes": "Scheduled occurrence #3",
       "created_at": "2026-09-09T12:34:45.246Z"
-    },
-    {
-      "id": 58,
-      "recurring_task_id": 14,
-      "recurring_task_title": "Weekly standup",
-      "scheduled_date": "2026-09-30",
-      "status": "PENDING",
-      "completed_at": null,
-      "notes": "Scheduled occurrence #4",
-      "created_at": "2026-09-09T12:34:45.246Z"
     }
   ],
   "comments": [],
   "auditLogs": [
+    {
+      "id": 161,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "EDIT_TASK_AI",
+      "entity_type": "Task",
+      "entity_id": "9",
+      "details": "AI updated task: \"Prepare presentation\" (Priority: LOW)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T16:57:55.939Z"
+    },
+    {
+      "id": 160,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "DELETE_OCCURRENCE",
+      "entity_type": "TaskOccurrence",
+      "entity_id": "58",
+      "details": "Deleted occurrence for \"Weekly standup\" on 2026-09-30",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T16:57:53.141Z"
+    },
+    {
+      "id": 159,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "UPDATE_OCCURRENCE_NOTE",
+      "entity_type": "TaskOccurrence",
+      "entity_id": "58",
+      "details": "Updated note on occurrence for \"Weekly standup\" (2026-09-30)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T16:57:50.742Z"
+    },
+    {
+      "id": 158,
+      "user_id": 1,
+      "username": "rifakhanum",
+      "action": "INITIALIZE_SYSTEM",
+      "entity_type": "System",
+      "entity_id": "0",
+      "details": "TaskFlow Manager initialized with enterprise architecture",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T16:57:44.471Z"
+    },
+    {
+      "id": 157,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "DELETE_OCCURRENCE",
+      "entity_type": "TaskOccurrence",
+      "entity_id": "21",
+      "details": "Deleted occurrence for \"Weekly Standup\" on 2026-09-09",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T16:52:19.088Z"
+    },
+    {
+      "id": 156,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "UPDATE_OCCURRENCE_NOTE",
+      "entity_type": "TaskOccurrence",
+      "entity_id": "58",
+      "details": "Updated note on occurrence for \"Weekly standup\" (2026-09-30)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T16:52:04.533Z"
+    },
+    {
+      "id": 155,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T16:37:21.130Z"
+    },
+    {
+      "id": 154,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T16:37:21.050Z"
+    },
+    {
+      "id": 153,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T16:37:20.937Z"
+    },
+    {
+      "id": 152,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T16:37:20.843Z"
+    },
+    {
+      "id": 151,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T16:23:39.405Z"
+    },
+    {
+      "id": 150,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T16:23:39.243Z"
+    },
+    {
+      "id": 149,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "LOGIN",
+      "entity_type": "User",
+      "entity_id": "4",
+      "details": "User login successful: sairabanu (role: member)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T16:23:37.840Z"
+    },
+    {
+      "id": 148,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "LOGIN",
+      "entity_type": "User",
+      "entity_id": "4",
+      "details": "User login successful: sairabanu (role: member)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T16:23:37.816Z"
+    },
+    {
+      "id": 147,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T15:35:47.451Z"
+    },
+    {
+      "id": 146,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T15:35:47.295Z"
+    },
+    {
+      "id": 145,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T15:35:47.228Z"
+    },
+    {
+      "id": 144,
+      "user_id": 4,
+      "username": "sairabanu",
+      "action": "AUDIT_ACCESS_DENIED",
+      "entity_type": "AuditLog",
+      "entity_id": "LEDGER",
+      "details": "Access denied: User \"sairabanu\" (role: member) attempted to access audit logs. Restricted strictly to Admin.",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T15:35:47.078Z"
+    },
+    {
+      "id": 143,
+      "user_id": 1,
+      "username": "rifakhanum",
+      "action": "INITIALIZE_SYSTEM",
+      "entity_type": "System",
+      "entity_id": "0",
+      "details": "TaskFlow Manager initialized with enterprise architecture",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-09-13T15:35:39.243Z"
+    },
     {
       "id": 142,
       "user_id": 4,
@@ -2055,6 +2244,6 @@
     "nextRecurringId": 16,
     "nextOccurrenceId": 64,
     "nextUserId": 7,
-    "nextAuditId": 143
+    "nextAuditId": 162
   }
 }

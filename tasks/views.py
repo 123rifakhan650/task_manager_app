@@ -466,6 +466,73 @@ class CompleteOccurrenceView(views.APIView):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+class TaskOccurrenceDetailView(views.APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        try:
+            occ = TaskOccurrence.objects.get(pk=pk)
+            return Response(TaskOccurrenceSerializer(occ).data)
+        except TaskOccurrence.DoesNotExist:
+            return Response({'error': 'Occurrence not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, pk):
+        try:
+            occ = TaskOccurrence.objects.get(pk=pk)
+            occ_id = occ.id
+            occ_date = str(occ.scheduled_date)
+            occ_title = occ.recurring_task_title
+            occ.delete()
+            create_audit_entry(request.user, 'DELETE_OCCURRENCE', 'TaskOccurrence', occ_id, f"Deleted occurrence on {occ_date} for '{occ_title}'", request.META.get('REMOTE_ADDR'))
+            return Response({
+                'message': f"Occurrence for '{occ_title}' on {occ_date} deleted successfully",
+                'deleted_id': occ_id
+            })
+        except TaskOccurrence.DoesNotExist:
+            return Response({'error': 'Occurrence not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def patch(self, request, pk):
+        try:
+            occ = TaskOccurrence.objects.get(pk=pk)
+            if 'notes' in request.data:
+                occ.notes = request.data.get('notes', '')
+            if 'status' in request.data:
+                occ.status = request.data.get('status', occ.status)
+            occ.save()
+            create_audit_entry(request.user, 'UPDATE_OCCURRENCE', 'TaskOccurrence', occ.id, f"Updated occurrence for '{occ.recurring_task_title}'", request.META.get('REMOTE_ADDR'))
+            return Response(TaskOccurrenceSerializer(occ).data)
+        except TaskOccurrence.DoesNotExist:
+            return Response({'error': 'Occurrence not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request, pk):
+        return self.patch(request, pk)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class TaskOccurrenceNotesView(views.APIView):
+    permission_classes = [AllowAny]
+
+    def patch(self, request, pk):
+        try:
+            occ = TaskOccurrence.objects.get(pk=pk)
+            notes_val = request.data.get('notes')
+            if notes_val is None:
+                notes_val = request.data.get('comments', '')
+            occ.notes = str(notes_val or '').strip()
+            occ.save(update_fields=['notes'])
+            create_audit_entry(request.user, 'UPDATE_OCCURRENCE_NOTE', 'TaskOccurrence', occ.id, f"Updated note on occurrence for '{occ.recurring_task_title}' ({occ.scheduled_date})", request.META.get('REMOTE_ADDR'))
+            return Response(TaskOccurrenceSerializer(occ).data)
+        except TaskOccurrence.DoesNotExist:
+            return Response({'error': 'Occurrence not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request, pk):
+        return self.patch(request, pk)
+
+    def put(self, request, pk):
+        return self.patch(request, pk)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
 class AuditLogListView(generics.ListAPIView):
     serializer_class = AuditLogSerializer
     permission_classes = [AllowAny]
@@ -1004,17 +1071,22 @@ class GeminiAssistantView(views.APIView):
                         'action': 'INFO',
                         'reply': f'I could not find a task matching "{message}" to delete.'
                     }
-            elif any(w in lower for w in ['complete', 'finish', 'done', 'resolve', 'update', 'priority', 'status']):
+            elif any(w in lower for w in ['edit', 'change', 'set', 'modify', 'mark', 'complete', 'finish', 'done', 'resolve', 'update', 'priority', 'status', 'low', 'high', 'urgent', 'medium']):
                 matched = None
                 for t in user_tasks:
                     if t.title.lower() in lower or str(t.id) in lower:
                         matched = t
                         break
                 if not matched and user_tasks.exists():
-                    matched = user_tasks.first()
+                    # If user is changing priority to LOW, prefer a task that is not already LOW
+                    if 'low' in lower:
+                        non_low = user_tasks.exclude(priority='LOW').first()
+                        matched = non_low or user_tasks.first()
+                    else:
+                        matched = user_tasks.first()
 
                 if matched:
-                    if any(w in lower for w in ['complete', 'done', 'finish']):
+                    if any(w in lower for w in ['complete', 'done', 'finish']) and not any(w in lower for w in ['priority', 'low', 'high', 'urgent', 'medium']):
                         parsed_action = {
                             'action': 'EDIT',
                             'reply': f'Marked task "{matched.title}" as completed.',
@@ -1022,7 +1094,14 @@ class GeminiAssistantView(views.APIView):
                             'updatedFields': {'status': 'COMPLETED'}
                         }
                     else:
-                        new_p = 'HIGH' if 'high' in lower else ('URGENT' if 'urgent' in lower else 'MEDIUM')
+                        if 'low' in lower:
+                            new_p = 'LOW'
+                        elif 'high' in lower:
+                            new_p = 'HIGH'
+                        elif 'urgent' in lower:
+                            new_p = 'URGENT'
+                        else:
+                            new_p = 'MEDIUM'
                         parsed_action = {
                             'action': 'EDIT',
                             'reply': f'Updated priority of task "{matched.title}" to {new_p}.',
