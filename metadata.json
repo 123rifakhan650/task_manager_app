@@ -1,6 +1,6 @@
 {
   "name": "TaskFlow",
-  "description": "Professional task and schedule management platform with interactive tracking, recurring schedules, and intelligent assistant. Created by Rifa Khanum.",
+  "description": "Enterprise task and recurring schedule orchestration platform with an interactive Eisenhower Priority Matrix, Django REST Framework backend, and Gemini AI assistant. Created by Rifa Khanum.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

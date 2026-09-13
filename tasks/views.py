@@ -1287,7 +1287,15 @@ class AnalyticsDashboardView(views.APIView):
             'total_estimated_hours': est_hours,
             'total_actual_hours': act_hours,
             'by_priority': by_priority,
+            'priority_breakdown': by_priority,
+            'status_breakdown': {
+                'TODO': todo,
+                'IN_PROGRESS': in_prog,
+                'REVIEW': review,
+                'COMPLETED': completed,
+            },
             'by_category': by_category,
+            'category_breakdown': by_category,
             'recent_activity': AuditLogSerializer(logs, many=True).data
         })
 

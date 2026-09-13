@@ -545,6 +545,10 @@ export default function App() {
           <AnalyticsView
             stats={stats}
             tasks={tasks}
+            onSelectTask={(task) => {
+              setEditingTask(task);
+              setIsTaskModalOpen(true);
+            }}
           />
         )}
 
